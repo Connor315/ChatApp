@@ -1,3 +1,0 @@
-The objective of this project is to create a fluent and robust Real-Time Chat Application using Rust with focusing on raw performance and scalability.
-
-The key features for this application include user authentication, real-time chatting, joining an creating chat room with one or more users, detecting user status whether is online or offline, and a user-friendly user interface for usage, and file/image transferring. 
