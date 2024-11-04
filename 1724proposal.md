@@ -71,7 +71,7 @@ Our group consists of three members: Chen Wang, Yalin Tuo, and Kangzhi Gao. To s
 - **Online Status Tracking (Chen Wang & Yalin Tuo)**: This feature will allow the app to show whether users are online or offline. Chen and Yalin will handle the detection and update of user presence status in real-time.
 - **Integrate Presence System with Backend and Frontend (Chen Wang & Yalin Tuo)**: They will also ensure that the presence system is fully integrated with both the backend logic and the frontend display, providing a dynamic and responsive user experience.
 
-#### Testing and Quality Assurance
-- **Functional and Performance Testing (All Members)**: Throughout the development process, all team members will continuously test the application for functionality and performance. This includes unit testing, integration testing, and stress testing to ensure the application is robust, secure, and performs well under load.
+#### Testing
+- **Functional and Performance Testing (All Members)**: Throughout the development process, all team members will continuously test the application for functionality and performance to ensure the application is robust, secure, and performs well under load.
 
 By dividing these tasks among our team based on expertise and project needs, we are confident in our ability to efficiently develop and deliver a high-quality, real-time chat application within the projected timeline.
