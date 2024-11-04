@@ -1,6 +1,9 @@
 ## ECE1724 Project Proposal
 
-#### Team Member: Chen Wang, Kangzhi Gao, Yalin Tuo
+#### Team Members
+- Chen Wang (wangc425 | 1006058926)
+- Kangzhi Gao (gaokangz | 1006307827)
+- Yalin Tuo (tuoyalin | 1006033196)
 
 ### Motivation
 
