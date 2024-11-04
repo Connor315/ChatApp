@@ -1,7 +1,0 @@
-### Motivation
-
-Our team is driven to develop this real-time chat application because many existing chat applications, such as Slack and Microsoft Teams, have notable limitations. While these applications are feature-rich, they often suffer from performance bottlenecks, especially with large numbers of users, and tend to have overly complex interfaces that can be difficult to navigate. In contrast, our application is designed to be lightweight, focusing on core functionality such as real-time messaging, efficient room management, and accurate online status detection.
-
-By keeping the interface simple and intuitive, and optimizing for speed and scalability, we aim to create a chat application that provides a seamless experience even under heavy usage. At the same time, we are interested in exploring new areas and technical challenges, and we are enthusiastic about researching and developing efficient solutions.
-
-We have team members with experience in user authentication and interface development, which gives us confidence in building a secure and user-friendly application. Additionally, using Rust allows us to develop a high-performance, resource-efficient system that fills a gap in the Rust ecosystem where few similar applications exist. This combination of simplicity, efficiency, and high performance sets our project apart from existing options and provides a streamlined and powerful solution to the problems commonly found in current chat applications.
