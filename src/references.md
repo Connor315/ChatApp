@@ -1,0 +1,11 @@
+https://docs.rs/sled/latest/sled/
+https://docs.rs/actix-web/latest/actix_web/
+https://actix.rs/docs/getting-started/
+https://actix.rs/docs/application/
+https://github.com/launchbadge/sqlx?tab=readme-ov-file
+https://tms-dev-blog.com/rust-sqlx-basics-with-sqlite/
+https://docs.rs/sqlx/latest/sqlx/fn.query.html
+https://actix.rs/docs/extractors#query
+https://docs.rs/sqlx/latest/sqlx/fn.query_scalar.html
+https://docs.rs/actix-session/0.6.2/actix_session/
+https://stackoverflow.com/questions/73737124/how-do-you-create-an-actix-web-httpserver-with-session-based-authentication
