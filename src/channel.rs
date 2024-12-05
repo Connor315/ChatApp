@@ -68,3 +68,8 @@ pub async fn channel_history(db: web::Data<Pool<Sqlite>>, info: web::Path<Channe
     // TODO
     HttpResponse::Ok().body(format!("{}", info.name))
 }
+
+pub async fn channel_list(db: web::Data<Pool<Sqlite>>, info: web::Path<ChannelRequest>) -> impl Responder {
+    // TODO
+    HttpResponse::Ok().body(format!("{}", info.name))
+}

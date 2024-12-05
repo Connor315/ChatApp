@@ -9,3 +9,4 @@ https://actix.rs/docs/extractors#query
 https://docs.rs/sqlx/latest/sqlx/fn.query_scalar.html
 https://docs.rs/actix-session/0.6.2/actix_session/
 https://stackoverflow.com/questions/73737124/how-do-you-create-an-actix-web-httpserver-with-session-based-authentication
+https://github.com/actix/examples/tree/master/websockets/chat-actorless

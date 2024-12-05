@@ -21,6 +21,7 @@ use channel::channel_create;
 use channel::channel_enter;
 // use channel::channel_exit;
 use channel::channel_history;
+use channel::channel_list;
 
 async fn welcome() -> impl Responder {
     // TODO: Add Help menu
@@ -52,6 +53,7 @@ async fn main() -> std::io::Result<()> {
             .service(
                 web::scope("/channel")
                     .route("/create", web::post().to(channel_create))
+                    .route("/list", web::get().to(channel_list))
                     // .route("/join/{channel_name}", web::post().to(channel_join))
                     .route("/enter/{channel_name}", web::post().to(channel_enter))
                     // .route("/exit/{channel_name}", web::post().to(channel_exit))
