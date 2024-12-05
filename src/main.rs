@@ -16,6 +16,9 @@ use database::init_sled_db;
 use user::register;
 use user::login;
 use user::logout;
+use chatroom::chatroom_create;
+use chatroom::chatroom_join;
+use chatroom::chatroom_exit;
 
 async fn welcome() -> impl Responder {
     // TODO: Add Help menu
@@ -37,7 +40,6 @@ async fn main() -> std::io::Result<()> {
             )
             .app_data(web::Data::new(sqlite_db.clone()))
             .app_data(web::Data::new(sled_db.clone()))
-            // .route("/count", web::get().to(count))
             .route("/", web::get().to(welcome))
             .service(
                 web::scope("/user")
@@ -45,6 +47,11 @@ async fn main() -> std::io::Result<()> {
                     .route("/login", web::post().to(login))
                     .route("/logout", web::post().to(logout))
             )
+            .service(
+                web::scope("/chatroom")
+                    .route("/create", web::post().to(chatroom_create))
+                    .route("/join/{chatroom_id}", web::post().to(chatroom_join))
+                    .route("/exit/{chatroom_id}", web::post().to(chatroom_exit)))
     })
     .bind("127.0.0.1:8080")?;
 
