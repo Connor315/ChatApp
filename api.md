@@ -21,10 +21,14 @@ Use the following command to register a new user:
 
 Use the following command to login and save the session cookies:
 
-    curl http://localhost:8080/user/login --json '{"username": "Connor", "password": "connor123"}' -c cookies.txt
+    curl http://localhost:8080/user/login --json '{"username": "Connor", "password": "connor123"}' -c cookies.txt -b cookies.txt
 
 ### 3. Logout User
 
 Use the following command to logout and update the session cookies:
 
     curl -b cookies.txt -c cookies.txt -X POST http://localhost:8080/user/logout
+
+### 4. Create Channel
+
+curl "http://localhost:8080/channel/create" -c cookies.txt -b cookies.txt --json '{"name": "General"}'

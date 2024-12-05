@@ -1,4 +1,4 @@
-use actix_web::{web, Responder, HttpResponse};
+use actix_web::{web, Responder, HttpResponse, Error};
 use sqlx::{Pool, Sqlite};
 use actix_session::Session;
 use serde::Deserialize;
@@ -17,11 +17,18 @@ pub struct LoginRequest {
     password: String,
 }
 
-pub fn check_auth(session: &Session) -> Result<u32, actix_web::Error> {
-    match session.get::<u32>("user_username").unwrap() {
-        Some(user_username) => Ok(user_username),
-        None => Err(ErrorUnauthorized("User not logged in.")),
-    }
+pub fn check_auth(session: &Session) -> Result<(u32, String), Error> {
+    let user_id = match session.get::<u32>("user_id")? {
+        Some(id) => id,
+        None => return Err(ErrorUnauthorized("User ID not found in session")),
+    };
+
+    let user_username = match session.get::<String>("user_username")? {
+        Some(username) => username,
+        None => return Err(ErrorUnauthorized("Username not found in session")),
+    };
+
+    Ok((user_id, user_username))
 }
 
 pub async fn register(db: web::Data<Pool<Sqlite>>, form: web::Json<RegisterRequest>) -> impl Responder {
@@ -40,6 +47,10 @@ pub async fn register(db: web::Data<Pool<Sqlite>>, form: web::Json<RegisterReque
 }
 
 pub async fn login(db: web::Data<Pool<Sqlite>>, session: Session, form: web::Json<LoginRequest>) -> impl Responder {
+    if check_auth(&session).is_ok() {
+        return HttpResponse::BadRequest().body("Logout required before logging in.");
+    }
+
     let user_data: Result<Option<(u32, String)>, sqlx::Error> = sqlx::query_as::<_, (u32, String)>("SELECT id, Password FROM Users WHERE Username = ?")
         .bind(&form.username)
         .fetch_optional(db.get_ref())
@@ -53,12 +64,14 @@ pub async fn login(db: web::Data<Pool<Sqlite>>, session: Session, form: web::Jso
     };
 
     if bcrypt::verify(&form.password, &user.1) {
-        let session_set = session.insert("user_username", &user.0);
-        match session_set {
-            Ok(_) => {
-                session.renew();
-                HttpResponse::Ok().json(format!("Login successful, {}", &form.username))},
-            Err(e) => HttpResponse::InternalServerError().body(e.to_string())
+        let id_set = session.insert("user_id", &user.0);
+        let username_set = session.insert("user_username", &form.username);
+
+        if id_set.is_ok() && username_set.is_ok() {
+            session.renew();
+            HttpResponse::Ok().json(format!("Login successful, {}", &form.username))
+        } else {
+            HttpResponse::InternalServerError().body("Error setting session data")
         }
     } else {
         HttpResponse::Unauthorized().json("Invalid username or password.")
@@ -66,6 +79,7 @@ pub async fn login(db: web::Data<Pool<Sqlite>>, session: Session, form: web::Jso
 }
 
 pub async fn logout(session: Session) -> impl Responder {
+    // println!("{:?}", session.entries());
     if check_auth(&session).is_err() {
         return HttpResponse::NotFound().body("No user logged in.");
     }

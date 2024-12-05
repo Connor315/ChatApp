@@ -26,20 +26,21 @@ pub async fn init_sqlite_db() -> Pool<Sqlite> {
         CREATE TABLE IF NOT EXISTS Users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             Username TEXT NOT NULL UNIQUE,
-            Password TEXT NOT NULL
+            Password TEXT NOT NULL,
+            Status TEXT NOT NULL DEFAULT 'offline'
         );
 
-        CREATE TABLE IF NOT EXISTS Groups (
+        CREATE TABLE IF NOT EXISTS Channel (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            GroupName TEXT NOT NULL
+            Name TEXT NOT NULL UNIQUE
         );
 
-        CREATE TABLE IF NOT EXISTS GroupMembers (
+        CREATE TABLE IF NOT EXISTS ChannelMembers (
             UserID INTEGER,
-            GroupID INTEGER,
-            PRIMARY KEY (UserID, GroupID),
+            ChannelID INTEGER,
+            PRIMARY KEY (UserID, ChannelID),
             FOREIGN KEY (UserID) REFERENCES Users(id),
-            FOREIGN KEY (GroupID) REFERENCES Groups(id)
+            FOREIGN KEY (ChannelID) REFERENCES Channel(id)
         );").execute(&db).await;
 
     match query {

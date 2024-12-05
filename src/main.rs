@@ -6,7 +6,7 @@ use tokio;
 
 mod database;
 mod user;
-mod chatroom;
+mod channel;
 mod status;
 mod ui;
 mod websocket;
@@ -16,9 +16,11 @@ use database::init_sled_db;
 use user::register;
 use user::login;
 use user::logout;
-use chatroom::chatroom_create;
-use chatroom::chatroom_join;
-use chatroom::chatroom_exit;
+use channel::channel_create;
+// use channel::channel_join;
+use channel::channel_enter;
+// use channel::channel_exit;
+use channel::channel_history;
 
 async fn welcome() -> impl Responder {
     // TODO: Add Help menu
@@ -48,10 +50,12 @@ async fn main() -> std::io::Result<()> {
                     .route("/logout", web::post().to(logout))
             )
             .service(
-                web::scope("/chatroom")
-                    .route("/create", web::post().to(chatroom_create))
-                    .route("/join/{chatroom_id}", web::post().to(chatroom_join))
-                    .route("/exit/{chatroom_id}", web::post().to(chatroom_exit)))
+                web::scope("/channel")
+                    .route("/create", web::post().to(channel_create))
+                    // .route("/join/{channel_name}", web::post().to(channel_join))
+                    .route("/enter/{channel_name}", web::post().to(channel_enter))
+                    // .route("/exit/{channel_name}", web::post().to(channel_exit))
+                    .route("/history/{channel_name}", web::post().to(channel_history)))
     })
     .bind("127.0.0.1:8080")?;
 
