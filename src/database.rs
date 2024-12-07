@@ -32,16 +32,13 @@ pub async fn init_sqlite_db() -> Pool<Sqlite> {
 
         CREATE TABLE IF NOT EXISTS Channel (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            Name TEXT NOT NULL UNIQUE
+            Name TEXT NOT NULL UNIQUE,
+            Owner TEXT NOT NULL,
+            FOREIGN KEY (Owner) REFERENCES Users(Username) ON DELETE SET NULL
         );
 
-        CREATE TABLE IF NOT EXISTS ChannelMembers (
-            UserID INTEGER,
-            ChannelID INTEGER,
-            PRIMARY KEY (UserID, ChannelID),
-            FOREIGN KEY (UserID) REFERENCES Users(id),
-            FOREIGN KEY (ChannelID) REFERENCES Channel(id)
-        );").execute(&db).await;
+        CREATE INDEX IF NOT EXISTS idx_users_username ON Users(Username);
+        CREATE INDEX IF NOT EXISTS idx_channel_name ON Channel(Name);").execute(&db).await;
 
     match query {
         Ok(_) => {
@@ -65,5 +62,6 @@ pub async fn init_sled_db() -> sled::Db {
         Err(e) => {
             panic!("Failed to initialize Sled database: {}", e);
         }
+        // "Username:channel_name:Datetime, Message"
     }
 }
