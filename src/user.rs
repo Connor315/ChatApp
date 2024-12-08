@@ -48,7 +48,7 @@ pub async fn register(db: web::Data<Pool<Sqlite>>, form: web::Json<RegisterReque
 
 pub async fn login(db: web::Data<Pool<Sqlite>>, session: Session, form: web::Json<LoginRequest>) -> impl Responder {
     if check_auth(&session).is_ok() {
-        return HttpResponse::BadRequest().body("Logout required before logging in.");
+        return HttpResponse::BadRequest().body("Already logged in.");
     }
 
     let user_data: Result<Option<(u32, String)>, sqlx::Error> = sqlx::query_as::<_, (u32, String)>("SELECT id, Password FROM Users WHERE Username = ?")

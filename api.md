@@ -32,3 +32,5 @@ Use the following command to logout and update the session cookies:
 ### 4. Create Channel
 
 curl "http://localhost:8080/channel/create" -c cookies.txt -b cookies.txt --json '{"name": "General"}'
+
+wasm-pack build --target web --out-dir ../static

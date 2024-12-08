@@ -1,14 +1,14 @@
-use actix_web::{web, App, HttpServer, Responder, HttpResponse, cookie::Key};
+use actix_web::{web, App, HttpServer, cookie::Key};
 use sqlx::{Pool, Sqlite};
 use actix_session::{SessionMiddleware, storage::CookieSessionStore};
 use sled::Db;
 use tokio;
+use actix_files as fs;
 
 mod database;
 mod user;
 mod channel;
 mod status;
-mod ui;
 mod websocket;
 
 use database::init_sqlite_db;
@@ -17,16 +17,10 @@ use user::register;
 use user::login;
 use user::logout;
 use channel::channel_create;
-// use channel::channel_join;
 use channel::channel_enter;
 // use channel::channel_exit;
 use channel::channel_history;
 use channel::channel_list;
-
-async fn welcome() -> impl Responder {
-    // TODO: Add Help menu
-    HttpResponse::Ok().body("Welcome to our real-time chat application!\n")
-}
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> std::io::Result<()> {
@@ -43,7 +37,6 @@ async fn main() -> std::io::Result<()> {
             )
             .app_data(web::Data::new(sqlite_db.clone()))
             .app_data(web::Data::new(sled_db.clone()))
-            .route("/", web::get().to(welcome))
             .service(
                 web::scope("/user")
                     .route("/register", web::post().to(register))
@@ -54,10 +47,11 @@ async fn main() -> std::io::Result<()> {
                 web::scope("/channel")
                     .route("/create", web::post().to(channel_create))
                     .route("/list", web::get().to(channel_list))
-                    // .route("/join/{channel_name}", web::post().to(channel_join))
                     .route("/enter/{channel_name}", web::post().to(channel_enter))
                     // .route("/exit/{channel_name}", web::post().to(channel_exit))
                     .route("/history/{channel_name}", web::post().to(channel_history)))
+            .service(fs::Files::new("/", "./static").index_file("index.html"))
+            // .service(fs::Files::new("/", "./static").index_file("index.html"))
     })
     .bind("127.0.0.1:8080")?;
 

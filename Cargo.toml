@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 actix-web = "4"
+actix-files = "0.6"
 actix-session = { version = "0.6", features = ["cookie-session"] }
 sqlx = { version = "0.8", features = ["sqlite", "macros", "runtime-tokio-native-tls"] }
 serde = { version = "1.0", features = ["derive"] }
