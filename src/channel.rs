@@ -48,11 +48,6 @@ pub async fn channel_create(db: web::Data<Pool<Sqlite>>, session: Session, info:
     }
 }
 
-// pub async fn channel_join(db: web::Data<Pool<Sqlite>>, info: web::Path<ChannelRequest>) -> impl Responder {
-//     // TODO
-//     HttpResponse::Ok().body(format!("{}", info.name))
-// }
-
 pub async fn channel_enter(db: web::Data<Pool<Sqlite>>, info: web::Path<ChannelRequest>) -> impl Responder {
     // TODO
     HttpResponse::Ok().body(format!("{}", info.name))
