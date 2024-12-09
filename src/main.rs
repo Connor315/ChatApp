@@ -1,4 +1,4 @@
-use actix_web::{web, App, HttpServer, cookie::Key};
+use actix_web::{web, App, HttpServer, cookie::Key, Responder, HttpResponse};
 use sqlx::{Pool, Sqlite};
 use actix_session::{SessionMiddleware, storage::CookieSessionStore};
 use sled::Db;
@@ -22,6 +22,18 @@ use channel::channel_enter;
 use channel::channel_history;
 use channel::channel_list;
 
+async fn login_page() -> impl Responder {
+    fs::NamedFile::open("./static/login.html")
+}
+
+async fn register_page() -> impl Responder {
+    fs::NamedFile::open("./static/register.html")
+}
+
+async fn index() -> impl Responder {
+    fs::NamedFile::open("./static/index.html")
+}
+
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> std::io::Result<()> {
     let sqlite_db: Pool<Sqlite> = init_sqlite_db().await;
@@ -37,6 +49,9 @@ async fn main() -> std::io::Result<()> {
             )
             .app_data(web::Data::new(sqlite_db.clone()))
             .app_data(web::Data::new(sled_db.clone()))
+            .route("/", web::get().to(index))
+            .route("/login", web::get().to(login_page))
+            .route("/register", web::get().to(register_page))
             .service(
                 web::scope("/user")
                     .route("/register", web::post().to(register))
@@ -50,8 +65,7 @@ async fn main() -> std::io::Result<()> {
                     .route("/enter/{channel_name}", web::post().to(channel_enter))
                     // .route("/exit/{channel_name}", web::post().to(channel_exit))
                     .route("/history/{channel_name}", web::post().to(channel_history)))
-            .service(fs::Files::new("/", "./static").index_file("index.html"))
-            // .service(fs::Files::new("/", "./static").index_file("index.html"))
+            .service(fs::Files::new("/", "./static"))
     })
     .bind("127.0.0.1:8080")?;
 
