@@ -22,3 +22,8 @@ Cargo.lock
 /target
 chat_sqlite.*
 chat_sled.db/
+static/frontend_bg.wasm
+static/frontend_bg.wasm.d.ts
+static/frontend.d.ts
+static/frontend.js
+static/package.json
