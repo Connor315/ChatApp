@@ -1,4 +1,4 @@
-// use gloo_net::http::Request;
+use gloo_net::http::Request;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
@@ -55,7 +55,7 @@ fn welcome() -> Html {
 }
 
 #[function_component(Login)]
-fn login_form() -> Html {
+fn login() -> Html {
     let username = use_state(String::new);
     let password = use_state(String::new);
     let error = use_state(String::new);
@@ -70,6 +70,29 @@ fn login_form() -> Html {
             let username = (*username).clone();
             let password = (*password).clone();
             let error = error.clone();
+
+            spawn_local(async move {
+                let response = Request::post("http://localhost:8080/user/login")
+                    .header("Content-Type", "application/json")
+                    .json(&serde_json::json!({ "username": username, "password": password }))
+                    .unwrap()
+                    .send()
+                    .await;
+
+                match response {
+                    Ok(resp) if resp.ok() => {
+                        gloo::console::log!("Login successful!");
+                        error.set(String::new());
+                        window().location().set_href("/channel_list").unwrap();
+                    }
+                    Ok(_) => {
+                        error.set("Invalid username or password.".to_string());
+                    }
+                    Err(_) => {
+                        error.set("Network error occurred.".to_string());
+                    }
+                }
+            })
         })
     };
 
@@ -95,6 +118,7 @@ fn login_form() -> Html {
                                 }
                             })
                         }
+                        class="input"
                     />
                     <input
                         type="password"
@@ -108,8 +132,9 @@ fn login_form() -> Html {
                                 }
                             })
                         }
+                        class="input"
                     />
-                    <button type="submit">{"Login"}</button>
+                    <button type="submit" class="button">{"Login"}</button>
                 </form>
             </div>
         </div>
