@@ -74,3 +74,90 @@ body {
     font-weight: bold;
     text-align: center;
 }
+
+/* Channel List Styles */
+.channel-container {
+    width: 600px;
+    padding: 20px;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    margin: 20px auto;
+}
+
+.channel-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.channel-item {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.channel-item:hover {
+    background-color: #f7fafc;
+}
+
+.channel-item.selected {
+    border-color: #4299e1;
+    background-color: #ebf8ff;
+}
+
+.channel-selector {
+    margin-right: 15px;
+}
+
+.radio-circle {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #cbd5e0;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.radio-circle.checked {
+    border-color: #4299e1;
+}
+
+.radio-circle.checked::after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background-color: #4299e1;
+    border-radius: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.channel-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.channel-name {
+    font-weight: bold;
+    color: #2d3748;
+}
+
+.channel-owner {
+    color: #718096;
+    font-size: 0.9em;
+}
+
+.enter-button {
+    width: 100%;
+    margin-top: 20px;
+}
