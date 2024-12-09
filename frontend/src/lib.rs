@@ -12,26 +12,12 @@ pub struct Channel {
     pub name: String,
     pub owner: String,
 }
+
 // #[derive(Serialize, Deserialize, Clone, Debug)]
 // struct ApiResponse<T> {
 //     success: bool,
 //     data: Option<T>,
 //     message: Option<String>,
-// }
-
-// #[derive(Serialize, Deserialize, Clone, Debug)]
-// struct User {
-//     id: i32,
-//     username: String,
-//     #[serde(skip_serializing)]
-//     password: String,
-// }
-
-// #[derive(Serialize, Deserialize, Clone, Debug)]
-// struct Channel {
-//     id: i32,
-//     name: String,
-//     owner: String,
 // }
 
 #[function_component(Welcome)]
@@ -91,11 +77,14 @@ fn login() -> Html {
                         error.set(String::new());
                         window().location().set_href("/channel_list").unwrap();
                     }
-                    Ok(_) => {
+                    Ok(resp) if resp.status() == 400 => {
+                        error.set("Already logged in!".to_string());
+                    }
+                    Ok(resp) if resp.status() == 401 => {
                         error.set("Invalid username or password.".to_string());
                     }
-                    Err(_) => {
-                        error.set("Network error occurred.".to_string());
+                    _ => {
+                        error.set("Error Occurred.".to_string());
                     }
                 }
             })
@@ -178,11 +167,14 @@ fn register() -> Html {
                         error.set(String::new());
                         window().location().set_href("/login").unwrap();
                     }
-                    Ok(_) => {
-                        error.set("Username already exists or invalid input.".to_string());
+                    Ok(resp) if resp.status() == 400 => {
+                        error.set("Already logged in!".to_string());
                     }
-                    Err(_) => {
-                        error.set("Network error occurred.".to_string());
+                    Ok(resp) if resp.status() == 409 => {
+                        error.set("Username already exists.".to_string());
+                    }
+                    _ => {
+                        error.set("Error occurred.".to_string());
                     }
                 }
             })
@@ -306,68 +298,78 @@ fn channel_list() -> Html {
     }
 }
 
-// #[function_component(ChannelList)]
-// fn channel_list() -> Html {
-//     let channels = use_state(Vec::new);
-//     let error = use_state(String::new);
+#[function_component(CreateChannel)]
+fn channel_create() -> Html {
+    let name = use_state(String::new);
+    let error = use_state(String::new);
 
-//     {
-//         let channels = channels.clone();
-//         let error = error.clone();
+    let onsubmit = {
+        let name = name.clone();
+        let error = error.clone();
 
-//         use_effect_with_deps(
-//             move |_| {
-//                 spawn_local(async move {
-//                     let resp = Request::get("/api/channels")
-//                         .send()
-//                         .await;
+        Callback::from(move |e: SubmitEvent| {
+            e.prevent_default();
+            let name = (*name).clone();
+            let error = error.clone();
 
-//                     match resp {
-//                         Ok(response) => {
-//                             let api_response: ApiResponse<Vec<Channel>> = response.json().await.unwrap();
-//                             if api_response.success {
-//                                 channels.set(api_response.data.unwrap_or_default());
-//                             } else {
-//                                 error.set(api_response.message.unwrap_or_else(|| "Failed to load channels".to_string()));
-//                             }
-//                         }
-//                         Err(_) => {
-//                             error.set("Network error".to_string());
-//                         }
-//                     }
-//                 });
-//                 || ()
-//             },
-//             (),
-//         );
-//     }
+            spawn_local(async move {
+                let response = Request::post("http://localhost:8080/channel/create")
+                    .header("Content-Type", "application/json")
+                    .json(&serde_json::json!({ "name": name}))
+                    .unwrap()
+                    .send()
+                    .await;
 
-//     html! {
-//         <div class="channel-list-container">
-//             <h2>{"Available Channels"}</h2>
-//             {if !(*error).is_empty() {
-//                 html! { <div class="error-message">{&*error}</div> }
-//             } else {
-//                 html! {
-//                     <div class="channel-list">
-//                         {channels.iter().map(|channel| {
-//                             html! {
-//                                 <div class="channel-item">
-//                                     <div class="channel-info">
-//                                         <span class="channel-name">{&channel.name}</span>
-//                                         <span class="channel-owner">{format!("Owner: {}", &channel.owner)}</span>
-//                                     </div>
-//                                     <button class="enter-button">{"Enter"}</button>
-//                                 </div>
-//                             }
-//                         }).collect::<Html>()}
-//                     </div>
-//                 }
-//             }}
-//         </div>
-//     }
-// }
+                match response {
+                    Ok(resp) if resp.ok() => {
+                        gloo::console::log!("Channel Create successful!");
+                        error.set(String::new());
+                        window().location().set_href("/channel_list").unwrap();
+                    }
+                    Ok(resp) if resp.status() == 401 => {
+                        error.set("Unauthorized!".to_string());
+                    }
+                    Ok(resp) if resp.status() == 409 => {
+                        error.set("Channel name already exists.".to_string());
+                    }
+                    _ => {
+                        error.set("Error occurred.".to_string());
+                    }
+                }
+            })
+        })
+    };
 
+    html! {
+        <div>
+            <div class="form">
+                <h2>{"Create A Channel"}</h2>
+                {if !(*error).is_empty() {
+                    html! { <div class="error-message">{&*error}</div> }
+                } else {
+                    html! {}
+                }}
+                <form {onsubmit}>
+                    <input
+                        type="text"
+                        placeholder="Channel Name"
+                        value={(*name).clone()}
+                        onchange={
+                            let name = name.clone();
+                            Callback::from(move |e: Event| {
+                                if let Some(input) = e.target_dyn_into::<HtmlInputElement>() {
+                                    name.set(input.value());
+                                }
+                            })
+                        }
+                        class="input"
+                    />
+                    <button type="submit" class="button">{"Create"}</button>
+                </form>
+            </div>
+        </div>
+    }
+}
 
 #[function_component(Index)]
 fn index() -> Html {
@@ -379,6 +381,7 @@ fn index() -> Html {
         "/login" => html! { <Login /> },
         "/register" => html! { <Register /> },
         "/channel_list" => html! { <ChannelList /> },
+        "/channel_create" => html! {<CreateChannel />},
         _ => html! { <h1>{ "404 Not Found" }</h1> },
     };
 

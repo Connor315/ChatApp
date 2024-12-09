@@ -56,7 +56,7 @@ pub async fn login(db: web::Data<Pool<Sqlite>>, session: Session, form: web::Jso
         .fetch_optional(db.get_ref())
         .await;
 
-    let user = match user_data
+    let user: (u32, String) = match user_data
     {
         Ok(Some(row)) => row,
         Err(_) => return HttpResponse::Unauthorized().json("Invalid username or password."),

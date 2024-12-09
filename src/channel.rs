@@ -3,6 +3,8 @@ use actix_web::{web, Responder, HttpResponse};
 use sqlx::{Pool, Sqlite};
 use serde::Deserialize;
 
+use crate::user::check_auth;
+
 #[derive(Deserialize)]
 pub struct ChannelRequest {
     name: String,
@@ -14,12 +16,9 @@ pub struct Channel {
 }
 
 pub async fn channel_create(db: web::Data<Pool<Sqlite>>, session: Session, info: web::Json<ChannelRequest>) -> impl Responder {
-    let user_id = match session.get::<u32>("user_id").unwrap() {
-        Some(id) => id,
-        None => return HttpResponse::Unauthorized().json("User not logged in."),
-    };
-
-    println!("{}", user_id);
+    if !check_auth(&session).is_ok() {
+        return HttpResponse::Unauthorized().json("User not logged in.")
+    }
 
     let query: &str = "INSERT INTO Channel (Name) VALUES (?) RETURNING id";
 
@@ -29,22 +28,8 @@ pub async fn channel_create(db: web::Data<Pool<Sqlite>>, session: Session, info:
         .await;
 
     match result {
-        Ok(channel) => {
-            let channel_id: i32 = channel.id;
-            let insert_result = sqlx::query(
-                "INSERT INTO ChannelMembers (UserID, ChannelID) VALUES (?, ?)"
-            )
-                .bind(&user_id)
-                .bind(channel_id)
-                .execute(db.get_ref())
-                .await;
-            
-            match insert_result {
-                Ok(_) => HttpResponse::Ok().json("Channel and membership created successfully!"),
-                Err(e) => HttpResponse::InternalServerError().json(format!("Failed to create channel membership: {}", e)),
-            }
-        },
-        Err(e) => HttpResponse::InternalServerError().json(format!("Failed to create channel: {}", e))
+        Ok(_) => HttpResponse::Ok().json("Channel created successfully!"),
+        Err(_) => HttpResponse::Conflict().json("Channel name already exists!")
     }
 }
 

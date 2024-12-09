@@ -1,3 +1,4 @@
+use actix_session::Session;
 use actix_web::{web, App, HttpServer, cookie::Key, Responder, HttpResponse};
 use sqlx::{Pool, Sqlite};
 use actix_session::{SessionMiddleware, storage::CookieSessionStore};
@@ -22,12 +23,27 @@ use channel::channel_enter;
 use channel::channel_history;
 use channel::channel_list;
 
+// pub async fn auth(session: Session) -> impl Responder {
+//     match check_auth(&session) {
+//         Ok(_) => HttpResponse::Ok().finish(),
+//         Err(err) => HttpResponse::Unauthorized().body(err.to_string()),
+//     }
+// }
+
 async fn login_page() -> impl Responder {
     fs::NamedFile::open("./static/login.html")
 }
 
 async fn register_page() -> impl Responder {
     fs::NamedFile::open("./static/register.html")
+}
+
+async fn channel_list_page() -> impl Responder {
+    fs::NamedFile::open("./static/channel_list.html")
+}
+
+async fn channel_create_page() -> impl Responder {
+    fs::NamedFile::open("./static/channel_list.html")
 }
 
 async fn index() -> impl Responder {
@@ -52,6 +68,8 @@ async fn main() -> std::io::Result<()> {
             .route("/", web::get().to(index))
             .route("/login", web::get().to(login_page))
             .route("/register", web::get().to(register_page))
+            .route("/channel_list", web::get().to(channel_list_page))
+            .route("/channel_create", web::get().to(channel_create_page))
             .service(
                 web::scope("/user")
                     .route("/register", web::post().to(register))

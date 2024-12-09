@@ -22,13 +22,47 @@ Our goal was to create an application that would run quickly in highly simultane
 ### Features
 For easy-to-use and user-friendly, we choose to use Sqlite by using sqlx and one nosql database using sled crate rather than using Postgresql which requires external dependencies, as you will see in the user's guide and Reproducibility guide, our setup procedures is super simple and easy to use and understand.
 User authentications such as ... is considered lower volumn compared to storing chat messages persistently in real life and existing productions, since ...so that we can use sqlite database with relational sql for data integrity and minimize errors, and use nosql database for chat messages to optimize read and write performance since messaging is priorities in our application with high volumn requests where we want to store the chat messages persistently as well.
-<!-- User’s (or Developer’s) Guide: How does a user — or developer, if the project is a crate — use each of the main features in the project deliverable? -->
 
+<!-- User’s (or Developer’s) Guide: How does a user — or developer, if the project is a crate — use each of the main features in the project deliverable? -->
 ### User’s Guide
-Reproducibility Guide: What are the commands needed to set up the runtime environment, if any, and to build the project, so that its features can be used by a user or a developer? Note: The instructor will follow the steps you have included in this section, step-by-step, with no deviation. The instructor has access to a Ubuntu Linux server and a macOS Sonoma laptop computer.
+
+
+<!-- Reproducibility Guide: What are the commands needed to set up the runtime environment, if any, and to build the project, so that its features can be used by a user or a developer? Note: The instructor will follow the steps you have included in this section, step-by-step, with no deviation. The instructor has access to a Ubuntu Linux server and a macOS Sonoma laptop computer. -->
+### Reproducibility Guide
+Please follow these steps to set up and run the project:
+
+1. Ensure that [Rust](https://www.rust-lang.org/) is installed on your computer.
+
+2. Install `wasm-pack` to compile Rust into WebAssembly, which is necessary for the Yew frontend:
+     ```bash
+     cargo install wasm-pack
+     ```
+
+3. Clone the project from the repository:
+     ```bash
+     git clone <repository-url>
+     cd chat
+     ```
+
+4. Navigate to the `frontend` folder and compile the Yew frontend into WebAssembly, outputting to the `../static` directory:
+     ```bash
+     cd frontend
+     wasm-pack build --target web --out-dir ../static --release
+     ```
+
+5. From the project root directory, build the backend in release mode and then run it:
+     ```bash
+     cd ..
+     cargo build --release
+     ./target/release/chat
+     ```
+
+6. Open a web browser and navigate to [http://localhost:8080/](http://localhost:8080/) to view the application successfully.
+
+#### Notes
+- The first time building the project may take longer as Rust downloads and compiles all dependencies.
 
 <!-- Contributions by each team member: What were the individual contributions by each member in the team? -->
-
 ### Contributions
 
 **Chen Wang:**
