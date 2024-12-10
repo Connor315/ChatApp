@@ -1,8 +1,8 @@
 use gloo_net::http::Request;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::spawn_local;
-use web_sys::{HtmlInputElement, Event, SubmitEvent}; 
+use web_sys::{HtmlInputElement, Event}; 
 use yew::prelude::*;
 use gloo::utils::window;
 
@@ -456,81 +456,136 @@ fn channel_create() -> Html {
 
 #[function_component(ChatRoom)]
 fn chat_room() -> Html {
-    let location = window().location();
-    let path = location.pathname().unwrap_or_else(|_| "/".to_string());
-    let channel_id = path.split('/').last()
-        .and_then(|id| id.parse::<i32>().ok())
-        .unwrap_or(0);
+   let error = use_state(|| String::new());
+   let current_channel = use_state(|| None::<Channel>);
+   let message = use_state(String::new);
+   let messages = use_state(|| Vec::<String>::new());
+   
+   let location = window().location();
+   let path = location.pathname().unwrap_or_else(|_| "/".to_string());
+   let channel_id = path.split('/').last()
+       .and_then(|id| id.parse::<i32>().ok())
+       .unwrap_or(0);
+   
+   {
+       let current_channel = current_channel.clone();
+       let error = error.clone();
+       
+       use_effect_with_deps(move |_| {
+           spawn_local(async move {
+               let response = Request::get(&format!("http://localhost:8080/channel/{}", channel_id))
+                   .send()
+                   .await;
 
-    let channels = vec![
-        Channel { id: 1, name: String::from("Channel 1"), owner: String::from("Concer") },
-        Channel { id: 2, name: String::from("Channel 2"), owner: String::from("Torin") },
-        Channel { id: 3, name: String::from("Channel 3"), owner: String::from("Chen") },
-        Channel { id: 4, name: String::from("Channel 4"), owner: String::from("Mr.Gao") },
-        Channel { id: 5, name: String::from("Channel 5"), owner: String::from("Mr.Wang") },
-        Channel { id: 6, name: String::from("Channel 6"), owner: String::from("MissTuo") },
-    ];
+               match response {
+                   Ok(resp) if resp.ok() => {
+                       match resp.json::<Channel>().await {
+                           Ok(channel_data) => current_channel.set(Some(channel_data)),
+                           Err(_) => error.set("Error loading channel".to_string()),
+                       }
+                   }
+                   Ok(_) => {
+                       error.set("Could not load channel".to_string());
+                   }
+                   Err(_) => {
+                       error.set("Network error".to_string());
+                   }
+               }
+           });
+           || ()
+       }, ());
+   }
 
-    let current_channel = channels.iter()
-        .find(|c| c.id == channel_id)
-        .cloned()
-        .unwrap_or(Channel { 
-            id: 0, 
-            name: String::from("Unknown Channel"), 
-            owner: String::from("Unknown") 
-        });
+   let on_message_change = {
+       let message = message.clone();
+       Callback::from(move |e: Event| {
+           if let Some(input) = e.target_dyn_into::<HtmlInputElement>() {
+               message.set(input.value());
+           }
+       })
+   };
 
-    let message = use_state(String::new);
+   let on_send = {
+       let message = message.clone();
+       let messages = messages.clone();
+       
+       Callback::from(move |_| {
+           let message_state = message.clone();
+           let messages_state = messages.clone();
+           let msg = (*message).clone();
+           
+           if !msg.is_empty() {
+               spawn_local(async move {
+                   let response = Request::post(&format!("http://localhost:8080/channel/{}/message", channel_id))
+                       .header("Content-Type", "application/json")
+                       .json(&serde_json::json!({ "content": msg.clone() }))
+                       .unwrap()
+                       .send()
+                       .await;
 
-    let on_message_change = {
-        let message = message.clone();
-        Callback::from(move |e: Event| {
-            if let Some(input) = e.target_dyn_into::<HtmlInputElement>() {
-                message.set(input.value());
-            }
-        })
-    };
+                   if let Ok(resp) = response {
+                       if resp.ok() {
+                           let mut new_messages = (*messages_state).clone();
+                           new_messages.push(msg);
+                           messages_state.set(new_messages);
+                           message_state.set(String::new());
+                       }
+                   }
+               });
+           }
+       })
+   };
 
-    let on_send = {
-        let message = message.clone();
-        Callback::from(move |_| {
-            let msg = (*message).clone();
-            if !msg.is_empty() {
-                gloo::console::log!("Sending message:", msg);
-                message.set(String::new());
-            }
-        })
-    };
+   let on_exit = Callback::from(move |_| {
+       window().location().set_href("/channel_list").unwrap();
+   });
 
-    let on_exit = Callback::from(move |_| {
-        window().location().set_href("/channel_list").unwrap();
-    });
-
-    html! {
-        <div class="chat-container">
-            <div class="chat-header">
-                <div class="header-left">
-                    <button onclick={on_exit} class="exit-button">{"Exit"}</button>
-                    <h2 class="channel-title">
-                        {format!("Channel: {} (Owner: {})", current_channel.name, current_channel.owner)}
-                    </h2>
-                </div>
-            </div>
-            <div class="chat-messages">
-                // Messages will be displayed here
-            </div>
-            <div class="chat-input">
-                <input
-                    type="text"
-                    placeholder="Type a message..."
-                    value={(*message).clone()}
-                    onchange={on_message_change}
-                    class="message-input"
-                />
-                <button onclick={on_send} class="send-button">{"Send"}</button>
-            </div>
-        </div>
-    }
+   match &*current_channel {
+       Some(channel) => html! {
+           <div class="chat-container">
+               <div class="chat-header">
+                   <div class="header-left">
+                       <button onclick={on_exit} class="exit-button">{"Exit"}</button>
+                       <h2 class="channel-title">
+                           {format!("Channel: {} (Owner: {})", channel.name, channel.owner)}
+                       </h2>
+                   </div>
+               </div>
+               {if !(*error).is_empty() {
+                   html! { <div class="error-message">{&*error}</div> }
+               } else {
+                   html! {}
+               }}
+               <div class="chat-messages">
+                   {for messages.iter().map(|msg| {
+                       html! {
+                           <div class="message">{msg}</div>
+                       }
+                   })}
+               </div>
+               <div class="chat-input">
+                   <input
+                       type="text"
+                       placeholder="Type a message..."
+                       value={(*message).clone()}
+                       onchange={on_message_change}
+                       class="message-input"
+                   />
+                   <button onclick={on_send} class="send-button">{"Send"}</button>
+               </div>
+           </div>
+       },
+       None => html! {
+           <div class="loading-container">
+               <h2>{"Loading channel..."}</h2>
+               {if !(*error).is_empty() {
+                   html! { <div class="error-message">{&*error}</div> }
+               } else {
+                   html! {}
+               }}
+           </div>
+       }
+   }
 }
 
 #[function_component(Index)]
