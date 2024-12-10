@@ -31,33 +31,27 @@ User authentications such as ... is considered lower volumn compared to storing 
 ### Reproducibility Guide
 Please follow these steps to set up and run the project:
 
-1. Ensure that [Rust](https://www.rust-lang.org/) is installed on your computer.
-
-2. Install `wasm-pack` to compile Rust into WebAssembly, which is necessary for the Yew frontend:
-     ```bash
-     cargo install wasm-pack
-     ```
-
-3. Clone the project from the repository:
+1. Install [Rust](https://www.rust-lang.org/) and `wasm-pack`:
+   ```bash
+   cargo install wasm-pack
+   ```
+2. Clone the project and navigate into it:
      ```bash
      git clone <repository-url>
      cd chat
      ```
-
-4. Navigate to the `frontend` folder and compile the Yew frontend into WebAssembly, outputting to the `../static` directory:
+3. Navigate to the `frontend` folder and compile it, outputting to the `../static` directory:
      ```bash
      cd frontend
      wasm-pack build --target web --out-dir ../static --release
      ```
-
-5. From the project root directory, build the backend in release mode and then run it:
+4. From the project root directory, build and run the backend:
      ```bash
      cd ..
      cargo build --release
      ./target/release/chat
      ```
-
-6. Open a web browser and navigate to [http://localhost:8080/](http://localhost:8080/) to view the application successfully.
+5. After seeing successful printouts in the terminal, access the app via browser at [http://localhost:8080/](http://localhost:8080/).
 
 #### Notes
 - The first time building the project may take longer as Rust downloads and compiles all dependencies.

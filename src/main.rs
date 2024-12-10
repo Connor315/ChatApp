@@ -44,7 +44,11 @@ async fn channel_list_page() -> impl Responder {
 }
 
 async fn channel_create_page() -> impl Responder {
-    fs::NamedFile::open("./static/channel_list.html")
+    fs::NamedFile::open("./static/channel_create.html")
+}
+
+async fn channel_page() -> impl Responder {
+    fs::NamedFile::open("./static/channel.html")
 }
 
 async fn index() -> impl Responder {
@@ -80,6 +84,7 @@ async fn main() -> std::io::Result<()> {
             .route("/register", web::get().to(register_page))
             .route("/channel_list", web::get().to(channel_list_page))
             .route("/channel_create", web::get().to(channel_create_page))
+            .route("/channel_room", web::get().to(channel_page))
             .service(
                 web::scope("/user")
                     .route("/register", web::post().to(register))

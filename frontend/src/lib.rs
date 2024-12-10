@@ -599,7 +599,7 @@ fn index() -> Html {
         "/register" => html! { <Register /> },
         "/channel_list" => html! { <ChannelList /> },
         "/channel_create" => html! { <CreateChannel /> },
-        path if path.starts_with("/channel/") => html! { <ChatRoom /> },
+        "/channel_room" => html! { <ChatRoom /> },
         _ => html! { <h1>{ "404 Not Found" }</h1> },
     };
 
