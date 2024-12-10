@@ -454,6 +454,85 @@ fn channel_create() -> Html {
     }
 }
 
+#[function_component(ChatRoom)]
+fn chat_room() -> Html {
+    let location = window().location();
+    let path = location.pathname().unwrap_or_else(|_| "/".to_string());
+    let channel_id = path.split('/').last()
+        .and_then(|id| id.parse::<i32>().ok())
+        .unwrap_or(0);
+
+    let channels = vec![
+        Channel { id: 1, name: String::from("Channel 1"), owner: String::from("Concer") },
+        Channel { id: 2, name: String::from("Channel 2"), owner: String::from("Torin") },
+        Channel { id: 3, name: String::from("Channel 3"), owner: String::from("Chen") },
+        Channel { id: 4, name: String::from("Channel 4"), owner: String::from("Mr.Gao") },
+        Channel { id: 5, name: String::from("Channel 5"), owner: String::from("Mr.Wang") },
+        Channel { id: 6, name: String::from("Channel 6"), owner: String::from("MissTuo") },
+    ];
+
+    let current_channel = channels.iter()
+        .find(|c| c.id == channel_id)
+        .cloned()
+        .unwrap_or(Channel { 
+            id: 0, 
+            name: String::from("Unknown Channel"), 
+            owner: String::from("Unknown") 
+        });
+
+    let message = use_state(String::new);
+
+    let on_message_change = {
+        let message = message.clone();
+        Callback::from(move |e: Event| {
+            if let Some(input) = e.target_dyn_into::<HtmlInputElement>() {
+                message.set(input.value());
+            }
+        })
+    };
+
+    let on_send = {
+        let message = message.clone();
+        Callback::from(move |_| {
+            let msg = (*message).clone();
+            if !msg.is_empty() {
+                gloo::console::log!("Sending message:", msg);
+                message.set(String::new());
+            }
+        })
+    };
+
+    let on_exit = Callback::from(move |_| {
+        window().location().set_href("/channel_list").unwrap();
+    });
+
+    html! {
+        <div class="chat-container">
+            <div class="chat-header">
+                <div class="header-left">
+                    <button onclick={on_exit} class="exit-button">{"Exit"}</button>
+                    <h2 class="channel-title">
+                        {format!("Channel: {} (Owner: {})", current_channel.name, current_channel.owner)}
+                    </h2>
+                </div>
+            </div>
+            <div class="chat-messages">
+                // Messages will be displayed here
+            </div>
+            <div class="chat-input">
+                <input
+                    type="text"
+                    placeholder="Type a message..."
+                    value={(*message).clone()}
+                    onchange={on_message_change}
+                    class="message-input"
+                />
+                <button onclick={on_send} class="send-button">{"Send"}</button>
+            </div>
+        </div>
+    }
+}
+
 #[function_component(Index)]
 fn index() -> Html {
     let location = window().location();
@@ -464,7 +543,7 @@ fn index() -> Html {
         "/login" => html! { <Login /> },
         "/register" => html! { <Register /> },
         "/channel_list" => html! { <ChannelList /> },
-        "/channel_create" => html! {<CreateChannel />},
+        path if path.starts_with("/channel/") => html! { <ChatRoom /> },
         _ => html! { <h1>{ "404 Not Found" }</h1> },
     };
 
