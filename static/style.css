@@ -52,6 +52,16 @@ body {
     align-self: center;
 }
 
+.func-btn {
+    width: 40%;
+    margin-right: 10%;
+}
+
+.func-btn:last-child {
+    margin-right: 0px;
+    margin-left: 10%;
+}
+
 .button:hover {
     background-color: #3182ce;
 }
