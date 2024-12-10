@@ -1,8 +1,6 @@
-use actix_session::Session;
-use actix_web::{web, App, HttpServer, cookie::Key, Responder, HttpResponse};
+use actix_web::{web, App, HttpServer, cookie::Key, Responder};
 use sqlx::{Pool, Sqlite};
 use actix_session::{SessionMiddleware, storage::CookieSessionStore};
-use sled::Db;
 use tokio;
 use actix_files as fs;
 
@@ -22,6 +20,9 @@ use channel::channel_enter;
 // use channel::channel_exit;
 use channel::channel_history;
 use channel::channel_list;
+
+use std::sync::{Arc, Mutex};
+use crate::websocket::ChatState;
 
 // pub async fn auth(session: Session) -> impl Responder {
 //     match check_auth(&session) {
@@ -53,10 +54,19 @@ async fn index() -> impl Responder {
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> std::io::Result<()> {
     let sqlite_db: Pool<Sqlite> = init_sqlite_db().await;
-    let sled_db: Db = init_sled_db().await;
+    // let sled_db: Db = init_sled_db().await;
+    let sled_db = web::Data::new(init_sled_db().await);
     let secret_key = Key::generate();
+    let chat_state = web::Data::new(Arc::new(ChatState {
+        messages: Mutex::new(Vec::new()),
+        connected_users: Mutex::new(Vec::new()),
+    }));
+    
+    
 
     let server = HttpServer::new(move || {
+        let chat_state = chat_state.clone();
+        let sled_db = sled_db.clone();
         App::new()
             .wrap(
                 SessionMiddleware::builder(CookieSessionStore::default(), secret_key.clone())
@@ -80,12 +90,25 @@ async fn main() -> std::io::Result<()> {
                 web::scope("/channel")
                     .route("/create", web::post().to(channel_create))
                     .route("/list", web::get().to(channel_list))
-                    .route("/enter/{channel_name}", web::post().to(channel_enter))
+                    .route("/enter/{name}", web::post().to(channel_enter))
+                    // .route("/channel/enter/{name}", web::post().to(|| async {
+                    //     println!("Channel enter route hit");
+                    //     // HttpResponse::Ok().body("Channel enter route works")
+                    // }))
                     // .route("/exit/{channel_name}", web::post().to(channel_exit))
                     .route("/history/{channel_name}", web::post().to(channel_history)))
+                    .route("/ws/", web::get().to({
+                        let chat_state = chat_state.clone();
+                        let sled_db = sled_db.clone();
+                        move |req, stream| {
+                            websocket::chat_route(req, stream, chat_state.clone(), sled_db.clone())
+                        }
+                    }))              
             .service(fs::Files::new("/", "./static"))
     })
     .bind("127.0.0.1:8080")?;
+
+
 
     println!("The server is currently listening on localhost:8080.");
     server.run().await

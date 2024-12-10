@@ -1,5 +1,45 @@
 use sqlx::{sqlite::{self, SqlitePoolOptions}, Pool, Sqlite, migrate::MigrateDatabase};
 use sled;
+use sled::Db;
+use chrono::Utc;
+
+pub fn append_chat_message_sled(
+    sled_db: &Db,
+    channel_name: &str,
+    username: &str,
+    message: &str,
+) -> Result<(), sled::Error> {
+    let timestamp = Utc::now().to_rfc3339(); // Current time in RFC 3339 format
+
+    // Construct a unique key: "channel_name:username:timestamp"
+    let key = format!("{}:{}:{}", channel_name, username, timestamp);
+
+    // Insert the message into the chat_history tree
+    sled_db
+        .open_tree("chat_history")?
+        .insert(key.as_bytes(), message.as_bytes())?;
+
+    Ok(())
+}
+
+
+pub fn get_chat_history_sled(
+    sled_db: &Db,
+    channel_name: &str,
+) -> Result<Vec<(String, String)>, sled::Error> {
+    let tree = sled_db.open_tree("chat_history")?;
+    let mut messages = Vec::new();
+
+    for item in tree.scan_prefix(channel_name.as_bytes()) {
+        let (key, value) = item?;
+        let key_str = String::from_utf8(key.to_vec()).unwrap_or_default();
+        let value_str = String::from_utf8(value.to_vec()).unwrap_or_default();
+        messages.push((key_str, value_str));
+    }
+
+    Ok(messages)
+}
+
 
 pub async fn init_sqlite_db() -> Pool<Sqlite> {
     if !Sqlite::database_exists("sqlite:chat_sqlite.db").await.unwrap_or(false) {
@@ -56,12 +96,14 @@ pub async fn init_sled_db() -> sled::Db {
 
     match db {
         Ok(sled_db) => {
+            // Ensure the chat history tree exists
+            sled_db.open_tree("chat_history").expect("Failed to open chat_history tree");
             println!("Sled database initialized successfully.");
             return sled_db;
-        },
+        }
         Err(e) => {
             panic!("Failed to initialize Sled database: {}", e);
         }
-        // "Username:channel_name:Datetime, Message"
     }
 }
+
