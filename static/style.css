@@ -171,3 +171,82 @@ body {
     width: 100%;
     margin-top: 20px;
 }
+
+
+
+/* Chat Room Styles */
+.chat-container {
+    width: 800px;
+    height: 600px;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.chat-header {
+    padding: 15px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.channel-title {
+    margin: 0;
+    color: #2d3748;
+}
+
+.exit-button {
+    padding: 8px 16px;
+    background-color: #e53e3e;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.exit-button:hover {
+    background-color: #c53030;
+}
+
+.chat-messages {
+    flex-grow: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.chat-input {
+    display: flex;
+    padding: 15px;
+    gap: 10px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.message-input {
+    flex-grow: 1;
+    padding: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    font-size: 1em;
+}
+
+.send-button {
+    padding: 10px 20px;
+    background-color: #4299e1;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.send-button:hover {
+    background-color: #3182ce;
+}
