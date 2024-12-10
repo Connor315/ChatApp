@@ -6,19 +6,12 @@ use web_sys::{HtmlInputElement, Event, SubmitEvent};
 use yew::prelude::*;
 use gloo::utils::window;
 
-#[derive(Clone, PartialEq)]
-pub struct Channel {
-    pub id: i32,
-    pub name: String,
-    pub owner: String,
+#[derive(Deserialize, Debug, Clone)]
+struct Channel {
+    id: i32,
+    name: String,
+    owner: String,
 }
-
-// #[derive(Serialize, Deserialize, Clone, Debug)]
-// struct ApiResponse<T> {
-//     success: bool,
-//     data: Option<T>,
-//     message: Option<String>,
-// }
 
 #[function_component(Welcome)]
 fn welcome() -> Html {
@@ -228,17 +221,36 @@ fn register() -> Html {
 
 #[function_component(ChannelList)]
 fn channel_list() -> Html {
-    let channels = vec![
-        Channel { id: 1, name: String::from("Channel 1"), owner: String::from("Concer") },
-        Channel { id: 2, name: String::from("Channel 2"), owner: String::from("Torin") },
-        Channel { id: 3, name: String::from("Channel 3"), owner: String::from("Chen") },
-        Channel { id: 4, name: String::from("Channel 4"), owner: String::from("Mr.Gao") },
-        Channel { id: 5, name: String::from("Channel 5"), owner: String::from("Mr.Wang") },
-        Channel { id: 6, name: String::from("Channel 6"), owner: String::from("MissTuo") },
-    ];
-    
+    let error = use_state(|| String::new());
+    let channels = use_state(|| Vec::new());
+
+    use_effect_with_deps({
+        let channels = channels.clone();
+        let error = error.clone();
+
+        move |_| {
+            spawn_local(async move {
+                let response = Request::get("http://localhost:8080/channel/list")
+                    .send()
+                    .await;
+
+                match response {
+                    Ok(resp) if resp.ok() => {
+                        match resp.json::<Vec<Channel>>().await {
+                            Ok(channels_data) => channels.set(channels_data),
+                            Err(_) => error.set("Error".to_string()),
+                        }
+                    }
+                    _ => {
+                        error.set("Unauthorized!".to_string());
+                    }
+                }
+            });
+            || ()
+        }
+    }, ());
+
     let selected_channel = use_state(|| None::<i32>);
-    let error = use_state(String::new);
 
     let on_channel_select = {
         let selected_channel = selected_channel.clone();
@@ -261,6 +273,37 @@ fn channel_list() -> Html {
         })
     };
 
+    let logout = {
+        let error = error.clone();
+        
+        Callback::from(move |e: MouseEvent| {
+            e.prevent_default();
+            let error = error.clone();
+
+            spawn_local(async move {
+                let response = Request::post("http://localhost:8080/user/logout")
+                    .send()
+                    .await;
+
+                match response {
+                    Ok(resp) if resp.ok() => {
+                        gloo::console::log!("Log Out successful!");
+                        window().location().set_href("/login").unwrap();
+                    }
+                    _ => {
+                        error.set("Unauthorized!".to_string());
+                    }
+                }
+            })
+        })
+    };
+
+    let navigate = {
+        Callback::from(move |_| {
+            window().location().set_href("/channel_create").unwrap();
+        })
+    };
+
     html! {
         <div class="channel-container">
             <h2>{"Available Channels"}</h2>
@@ -270,14 +313,14 @@ fn channel_list() -> Html {
                 html! {}
             }}
             <div class="channel-list">
-                { channels.iter().map(|channel| {
+                { for channels.iter().map(|channel| {
                     let is_selected = *selected_channel == Some(channel.id);
                     let channel_id = channel.id;
                     let on_select = {
                         let on_channel_select = on_channel_select.clone();
                         Callback::from(move |_| on_channel_select.emit(channel_id))
                     };
-                    
+
                     html! {
                         <div class={classes!("channel-item", is_selected.then(|| "selected"))}>
                             <div class="channel-selector" onclick={on_select}>
@@ -289,10 +332,16 @@ fn channel_list() -> Html {
                             </div>
                         </div>
                     }
-                }).collect::<Html>()}
+                })}
             </div>
             <button onclick={on_enter} class="button enter-button">
                 {"Enter Channel"}
+            </button>
+            <button onclick={logout} class="button func-btn">
+                {"Log Out"}
+            </button>
+            <button onclick={navigate} class="button func-btn">
+                {"Create A Channel"}
             </button>
         </div>
     }
@@ -340,6 +389,38 @@ fn channel_create() -> Html {
         })
     };
 
+    let logout = {
+        let error = error.clone();
+        
+        Callback::from(move |e: MouseEvent| {
+            e.prevent_default();
+            let error = error.clone();
+
+            spawn_local(async move {
+                let response = Request::post("http://localhost:8080/user/logout")
+                    .send()
+                    .await;
+
+                match response {
+                    Ok(resp) if resp.ok() => {
+                        gloo::console::log!("Log Out successful!");
+                        error.set(String::new());
+                        window().location().set_href("/login").unwrap();
+                    }
+                    _ => {
+                        error.set("Unauthorized!".to_string());
+                    }
+                }
+            })
+        })
+    };
+
+    let navigate = {
+        Callback::from(move |_| {
+            window().location().set_href("/channel_list").unwrap();
+        })
+    };
+
     html! {
         <div>
             <div class="form">
@@ -365,7 +446,88 @@ fn channel_create() -> Html {
                         class="input"
                     />
                     <button type="submit" class="button">{"Create"}</button>
+                    <button onclick={navigate} class="button">{"Available Channel List"}</button>
+                    <button onclick={logout} class="button">{"Log Out"}</button>
                 </form>
+            </div>
+        </div>
+    }
+}
+
+#[function_component(ChatRoom)]
+fn chat_room() -> Html {
+    let location = window().location();
+    let path = location.pathname().unwrap_or_else(|_| "/".to_string());
+    let channel_id = path.split('/').last()
+        .and_then(|id| id.parse::<i32>().ok())
+        .unwrap_or(0);
+
+    let channels = vec![
+        Channel { id: 1, name: String::from("Channel 1"), owner: String::from("Concer") },
+        Channel { id: 2, name: String::from("Channel 2"), owner: String::from("Torin") },
+        Channel { id: 3, name: String::from("Channel 3"), owner: String::from("Chen") },
+        Channel { id: 4, name: String::from("Channel 4"), owner: String::from("Mr.Gao") },
+        Channel { id: 5, name: String::from("Channel 5"), owner: String::from("Mr.Wang") },
+        Channel { id: 6, name: String::from("Channel 6"), owner: String::from("MissTuo") },
+    ];
+
+    let current_channel = channels.iter()
+        .find(|c| c.id == channel_id)
+        .cloned()
+        .unwrap_or(Channel { 
+            id: 0, 
+            name: String::from("Unknown Channel"), 
+            owner: String::from("Unknown") 
+        });
+
+    let message = use_state(String::new);
+
+    let on_message_change = {
+        let message = message.clone();
+        Callback::from(move |e: Event| {
+            if let Some(input) = e.target_dyn_into::<HtmlInputElement>() {
+                message.set(input.value());
+            }
+        })
+    };
+
+    let on_send = {
+        let message = message.clone();
+        Callback::from(move |_| {
+            let msg = (*message).clone();
+            if !msg.is_empty() {
+                gloo::console::log!("Sending message:", msg);
+                message.set(String::new());
+            }
+        })
+    };
+
+    let on_exit = Callback::from(move |_| {
+        window().location().set_href("/channel_list").unwrap();
+    });
+
+    html! {
+        <div class="chat-container">
+            <div class="chat-header">
+                <div class="header-left">
+                    <button onclick={on_exit} class="exit-button">{"Exit"}</button>
+                    <h2 class="channel-title">
+                        {format!("Channel: {} (Owner: {})", current_channel.name, current_channel.owner)}
+                    </h2>
+                </div>
+            </div>
+            <div class="chat-messages">
+                // Messages will be displayed here
+            </div>
+            <div class="chat-input">
+                <input
+                    type="text"
+                    placeholder="Type a message..."
+                    value={(*message).clone()}
+                    onchange={on_message_change}
+                    class="message-input"
+                />
+                <button onclick={on_send} class="send-button">{"Send"}</button>
             </div>
         </div>
     }
@@ -381,7 +543,7 @@ fn index() -> Html {
         "/login" => html! { <Login /> },
         "/register" => html! { <Register /> },
         "/channel_list" => html! { <ChannelList /> },
-        "/channel_create" => html! {<CreateChannel />},
+        path if path.starts_with("/channel/") => html! { <ChatRoom /> },
         _ => html! { <h1>{ "404 Not Found" }</h1> },
     };
 
