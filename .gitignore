@@ -27,3 +27,4 @@ static/frontend_bg.wasm.d.ts
 static/frontend.d.ts
 static/frontend.js
 static/package.json
+*.txt
