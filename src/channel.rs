@@ -9,8 +9,14 @@ use crate::websocket::ChatState;
 use actix_web_actors::ws;
 use crate::database::get_chat_history_sled;
 use crate::websocket::ChatSession;
+use serde_json::json;
 
-
+#[derive(Serialize, Deserialize)]
+pub struct ChatMessage {
+    pub timestamp: String,
+    pub username: String,
+    pub message: String,
+}
 
 #[derive(Deserialize)]
 pub struct ChannelRequest {
@@ -23,6 +29,13 @@ struct Channel {
     name: String,
     owner: String,
 }
+
+#[derive(Deserialize)]
+pub struct ChannelPath {
+    name: String,
+}
+
+
 
 pub async fn channel_create(db: web::Data<Pool<Sqlite>>, session: Session, info: web::Json<ChannelRequest>) -> impl Responder {
     if !check_auth(&session).is_ok() {
@@ -57,13 +70,14 @@ pub async fn channel_create(db: web::Data<Pool<Sqlite>>, session: Session, info:
 //     req: HttpRequest,
 //     stream: web::Payload,
 // ) -> impl Responder {
+//     println!("channel_enter called with info: {:?}", info.name);
+
 //     let channel_name = &info.name;
 
 //     let (_user_id, user_name) = match check_auth(&session) {
 //         Ok((id, username)) => (id, username),
 //         Err(err) => return HttpResponse::Unauthorized().body(err.to_string()),
 //     };
-
 //     // Check if the channel exists
 //     match sqlx::query!("SELECT * FROM Channel WHERE Name = ?", channel_name)
 //         .fetch_optional(db.get_ref())
@@ -89,12 +103,44 @@ pub async fn channel_create(db: web::Data<Pool<Sqlite>>, session: Session, info:
 //         Err(_) => HttpResponse::InternalServerError().finish(),
 //     }
 // }
+pub async fn channel_enter(
+    db: web::Data<Pool<Sqlite>>,
+    info: web::Path<ChannelRequest>,
+    session: Session,
+) -> impl Responder {
+    
+    if !check_auth(&session).is_ok() {
+        return HttpResponse::Unauthorized().json("User not logged in.");
+    }
 
-pub async fn channel_enter() -> impl Responder {
-    println!("channel_enter invoked with channel_name");
+    let channel_name = &info.name;
 
-    HttpResponse::Ok().body("Channel enter endpoint works!")
+    // Check if channel exists
+    match sqlx::query!("SELECT * FROM Channel WHERE Name = ?", channel_name)
+        .fetch_optional(db.get_ref())
+        .await
+    {
+        Ok(Some(_)) => {
+            // Return success with WebSocket connection details
+            HttpResponse::Ok().json(json!({
+                "status": "success",
+                "channel": channel_name,
+                "ws_url": format!("/ws/{}", channel_name)
+            }))
+        }
+        Ok(None) => {
+            println!("Channel not found.");
+            HttpResponse::NotFound().json("Channel not found.")
+        }
+        Err(e) => {
+            println!("Error querying database: {}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
 }
+
+
+
 
 
 
@@ -106,13 +152,21 @@ pub async fn channel_enter() -> impl Responder {
 
 pub async fn channel_history(
     sled_db: web::Data<sled::Db>,
-    info: web::Path<ChannelRequest>,
+    info: web::Path<ChannelPath>,
 ) -> impl Responder {
+    println!("Accessing channel history for: {}", info.name);
+    
     let channel_name = &info.name;
-
+    
     match get_chat_history_sled(&sled_db, channel_name) {
-        Ok(messages) => HttpResponse::Ok().json(messages),
-        Err(_) => HttpResponse::InternalServerError().body("Failed to retrieve chat history"),
+        Ok(messages) => {
+            println!("Found {} messages", messages.len());
+            HttpResponse::Ok().json(messages)  // This will now return properly formatted JSON
+        },
+        Err(err) => {
+            println!("Error getting chat history: {:?}", err);
+            HttpResponse::InternalServerError().body("Failed to retrieve chat history")
+        }
     }
 }
 

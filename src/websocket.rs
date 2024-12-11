@@ -4,7 +4,29 @@ use actix_web_actors::ws;
 use chrono::Utc;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+use actix_session::SessionExt;
+use crate::Sqlite;
+use crate::Pool;
+use crate::user;
 use crate::database::append_chat_message_sled;
+// Add this at top of websocket.rs
+use actix::prelude::*;
+
+// Add this struct
+#[derive(Message)]
+#[rtype(result = "()")]
+struct ChatMessage {
+    msg: String,
+}
+
+// Add Handler implementation for ChatSession
+impl Handler<ChatMessage> for ChatSession {
+    type Result = ();
+
+    fn handle(&mut self, msg: ChatMessage, ctx: &mut Self::Context) {
+        ctx.text(msg.msg);
+    }
+}
 
 /// Define interval for ping messages
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
@@ -14,6 +36,7 @@ const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 pub struct ChatState {
     pub messages: Mutex<Vec<(String, String, String)>>, // (timestamp, user, message)
     pub connected_users: Mutex<Vec<String>>,           // List of connected users
+    pub sessions: Mutex<Vec<Addr<ChatSession>>>,
 }
 
 /// Define the WebSocket connection structure
@@ -60,9 +83,14 @@ impl ChatSession {
 
     /// Broadcast a message to all connected clients
     fn broadcast_message(&self, message: &str, ctx: &mut ws::WebsocketContext<Self>) {
-        let users = self.state.connected_users.lock().unwrap().clone();
-        for user in users {
-            ctx.text(format!("{}: {}", self.user_name, message));
+        // Format the message
+        let msg = format!("{}: {}", self.user_name, message);
+        
+        // Get all sessions and broadcast to them
+        if let Ok(sessions) = self.state.sessions.lock() {
+            for session in sessions.iter() {
+                session.do_send(ChatMessage { msg: msg.clone() });
+            }
         }
     }
 }
@@ -73,25 +101,35 @@ impl Actor for ChatSession {
 
     fn started(&mut self, ctx: &mut Self::Context) {
         self.hb(ctx);
-
+    
+        // Store session address
+        if let Ok(mut sessions) = self.state.sessions.lock() {
+            sessions.push(ctx.address());
+        }
+    
         // Add the user to the connected users list
         {
             let mut users = self.state.connected_users.lock().unwrap();
             users.push(self.user_name.clone());
         }
-
+    
         // Broadcast join message
         let join_message = format!("{} joined the chat", self.user_name);
         self.broadcast_message(&join_message, ctx);
     }
 
     fn stopped(&mut self, ctx: &mut Self::Context) {
+        // Remove session
+        if let Ok(mut sessions) = self.state.sessions.lock() {
+            sessions.retain(|x| x != &ctx.address());
+        }
+    
         // Remove the user from the connected users list
         {
             let mut users = self.state.connected_users.lock().unwrap();
             users.retain(|user| user != &self.user_name);
         }
-
+    
         // Broadcast quit message
         let quit_message = format!("{} left the chat", self.user_name);
         self.broadcast_message(&quit_message, ctx);
@@ -121,7 +159,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for ChatSession {
                 // Append the message to the Sled database using `self.sled_db`
                 if let Err(err) = append_chat_message_sled(
                     &self.sled_db, // Access sled_db from the struct
-                    "example_channel", // Replace with dynamic channel name
+                    &self.channel_name, 
                     &self.user_name,
                     &text,
                 ) {
@@ -151,16 +189,56 @@ pub async fn chat_route(
     stream: web::Payload,
     state: web::Data<Arc<ChatState>>,
     sled_db: web::Data<sled::Db>,
+    channel_name: web::Path<String>,
 ) -> Result<HttpResponse, Error> {
-    let channel_name = req.match_info().get("channel").unwrap_or("default").to_string(); // Example dynamic channel
+    println!("WebSocket connection attempt for channel: {}", channel_name);
+    
+    // Get session from request
+    let session = req.get_session();
+    
+    // Check authentication
+    let (_user_id, username) = match user::check_auth(&session) {
+        Ok((id, name)) => (id, name),
+        Err(_) => return Ok(HttpResponse::Unauthorized().finish()),
+    };
+
+    // Get database connection from app data
+    let db = match req.app_data::<web::Data<Pool<Sqlite>>>() {
+        Some(db) => db,
+        None => return Ok(HttpResponse::InternalServerError().finish()),
+    };
+
+    // Get database reference first
+    let db_ref = db.get_ref();
+
+    // Execute query and handle the result
+    let channel_name_ref = channel_name.as_ref();
+    let query = sqlx::query!("SELECT * FROM Channel WHERE Name = ?", channel_name_ref);
+    let channel_exists = query.fetch_optional(db_ref).await.map_err(|e| {
+        println!("Database error: {}", e);
+        actix_web::error::ErrorInternalServerError(e)
+    })?;
+
+    // Check if channel exists
+    if channel_exists.is_none() {
+        println!("Channel not found: {}", channel_name);
+        return Ok(HttpResponse::NotFound().finish());
+    }
+
+    // Start WebSocket connection
+    println!("Starting WebSocket connection for user {} in channel {}", username, channel_name);
+    
     let resp = ws::start(
-        ChatSession::new("User".to_string(), channel_name, state.get_ref().clone(), sled_db.clone()),
+        ChatSession::new(
+            username,
+            channel_name.to_string(),
+            state.get_ref().clone(),
+            sled_db.clone(),
+        ),
         &req,
         stream,
-    );
-    resp
+    )?;
+
+    println!("WebSocket connection established");
+    Ok(resp)
 }
-
-
-
-

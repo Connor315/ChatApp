@@ -17,11 +17,15 @@ Use the following command to register a new user:
 
     curl http://localhost:8080/user/register --json '{"username": "Connor", "password": "connor123"}'
 
+    curl http://localhost:8080/user/register --json '{"username": "Chen", "password": "chen123"}'
+
 ### 2. Login User
 
 Use the following command to login and save the session cookies:
 
     curl http://localhost:8080/user/login --json '{"username": "Connor", "password": "connor123"}' -c cookies.txt -b cookies.txt
+
+    curl http://localhost:8080/user/login --json '{"username": "Chen", "password": "chen123"}' -c cookies1.txt -b cookies1.txt
 
 ### 3. Logout User
 
@@ -38,15 +42,24 @@ wasm-pack build --target web --out-dir ../static
 
 ### 5. Enter Channel
 
-curl -X POST -b cookies.txt -c cookies.txt http://localhost:8080/channel/enter/General
+curl -X GET \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  http://localhost:8080/channel/enter/General
 
 ### 6. Chat in a channel
 
-websocat -b ws://localhost:8080/ws/
+cargo install websocat
+
+websocat "ws://localhost:8080/channel/ws/General" --header "Cookie: id=$(grep "id" cookies.txt | cut -f7)"  `first user`
+
+websocat "ws://localhost:8080/channel/ws/General" --header "Cookie: id=$(grep "id" cookies1.txt | cut -f7)"   `second user`
 
 then, send a message: "Hello, everyone!"
 
 ### 7. Retrieve chat history
 
-curl -b cookies.txt -c cookies.txt http://localhost:8080/channel/history/General
+curl -b cookies.txt -c cookies.txt http://localhost:8080/channel/history/General   `first user`
+
+curl -b cookies1.txt -c cookies1.txt http://localhost:8080/channel/history/General   `second user` 
 

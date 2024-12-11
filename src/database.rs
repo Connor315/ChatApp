@@ -3,40 +3,52 @@ use sled;
 use sled::Db;
 use chrono::Utc;
 
+use crate::channel::ChatMessage;
+
+// In database.rs
 pub fn append_chat_message_sled(
     sled_db: &Db,
     channel_name: &str,
     username: &str,
     message: &str,
 ) -> Result<(), sled::Error> {
-    let timestamp = Utc::now().to_rfc3339(); // Current time in RFC 3339 format
-
-    // Construct a unique key: "channel_name:username:timestamp"
-    let key = format!("{}:{}:{}", channel_name, username, timestamp);
-
-    // Insert the message into the chat_history tree
-    sled_db
-        .open_tree("chat_history")?
-        .insert(key.as_bytes(), message.as_bytes())?;
+    let timestamp = Utc::now().to_rfc3339();
+    
+    // Use channel name as the tree name
+    let tree = sled_db.open_tree(channel_name)?;
+    
+    // Use timestamp as key
+    let key = format!("{}:{}", username, timestamp);
+    tree.insert(key.as_bytes(), message.as_bytes())?;
 
     Ok(())
 }
 
-
 pub fn get_chat_history_sled(
     sled_db: &Db,
     channel_name: &str,
-) -> Result<Vec<(String, String)>, sled::Error> {
-    let tree = sled_db.open_tree("chat_history")?;
+) -> Result<Vec<ChatMessage>, sled::Error> {
+    println!("Getting history for channel: {}", channel_name);
+    let tree = sled_db.open_tree(channel_name)?;
     let mut messages = Vec::new();
 
-    for item in tree.scan_prefix(channel_name.as_bytes()) {
+    for item in tree.iter() {
         let (key, value) = item?;
         let key_str = String::from_utf8(key.to_vec()).unwrap_or_default();
         let value_str = String::from_utf8(value.to_vec()).unwrap_or_default();
-        messages.push((key_str, value_str));
+        
+        println!("Decoded - Key: {}, Value: {}", key_str, value_str);
+        // Split only on the first colon
+        if let Some((username, timestamp)) = key_str.split_once(':') {
+            messages.push(ChatMessage {
+                timestamp: timestamp.to_string(),
+                username: username.to_string(),
+                message: value_str,
+            });
+        }
     }
 
+    println!("Total messages found: {}", messages.len());
     Ok(messages)
 }
 
