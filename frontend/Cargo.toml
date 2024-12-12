@@ -9,8 +9,8 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 yew = { version = "0.20", features = ["csr"] }
 wasm-bindgen = "0.2"
-gloo = "0.6"
-gloo-net = "0.2"
+gloo = { version = "0.6", features = ["futures"] }
+gloo-net = { version = "0.4", features = ["http"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 wasm-bindgen-futures = "0.4.36"
@@ -24,3 +24,5 @@ web-sys = { version = "0.3", features = [
     "SubmitEvent"
 ]}
 gloo-storage = "0.1"
+reqwasm = "0.5"
+chrono = { version = "0.4", features = ["serde"] }

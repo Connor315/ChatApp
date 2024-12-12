@@ -1,10 +1,9 @@
 use actix_web::{web, App, HttpServer, cookie::Key, Responder};
 use sqlx::{Pool, Sqlite};
 use actix_session::{SessionMiddleware, storage::CookieSessionStore};
-use actix_web::HttpResponse;
+// use actix_web::HttpResponse;
 use tokio;
 use actix_files as fs;
-
 mod database;
 mod user;
 mod channel;
@@ -21,10 +20,10 @@ use channel::channel_enter;
 // use channel::channel_exit;
 use channel::channel_history;
 use channel::channel_list;
-
 use std::sync::{Arc, Mutex};
 use crate::websocket::ChatState;
-
+use actix_cors::Cors;
+use actix_web::http::header;
 // pub async fn auth(session: Session) -> impl Responder {
 //     match check_auth(&session) {
 //         Ok(_) => HttpResponse::Ok().finish(),
@@ -56,6 +55,10 @@ async fn index() -> impl Responder {
     fs::NamedFile::open("./static/index.html")
 }
 
+// async fn channel_enter_page() -> impl Responder {
+//     fs::NamedFile::open("./static/channel.html")
+// }
+
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> std::io::Result<()> {
     let sqlite_db: Pool<Sqlite> = init_sqlite_db().await;
@@ -77,6 +80,22 @@ async fn main() -> std::io::Result<()> {
                 SessionMiddleware::builder(CookieSessionStore::default(), secret_key.clone())
                     .cookie_secure(false)
                     .build(),
+            )
+            .wrap(
+                Cors::default()
+                    .allowed_origin("http://localhost:8081")
+                    .allowed_methods(vec!["GET", "POST"])
+                    .allowed_headers(vec![
+                        header::AUTHORIZATION,
+                        header::ACCEPT,
+                        header::CONTENT_TYPE,
+                        header::UPGRADE,
+                        header::CONNECTION,
+                        header::SEC_WEBSOCKET_KEY,
+                        header::SEC_WEBSOCKET_VERSION,
+                    ])
+                    .supports_credentials()
+                    .max_age(3600)
             )
             .app_data(web::Data::new(sqlite_db.clone()))
             .app_data(web::Data::new(sled_db.clone()))

@@ -6,12 +6,31 @@ use web_sys::{HtmlInputElement, Event};
 use yew::prelude::*;
 use gloo::utils::window;
 use gloo_storage::{Storage, LocalStorage};
+use serde::Serialize;
+use web_sys::WebSocket;
+use wasm_bindgen::JsCast;
+use web_sys::MessageEvent;
+use wasm_bindgen::closure::Closure;
+use gloo::timers::future::TimeoutFuture;
+use chrono;
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(PartialEq, Clone, Debug, Deserialize)] 
 struct Channel {
-    id: i32,
+    id: u32,
     name: String,
     owner: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct ChatMessage {
+    username: String,
+    message: String,
+    timestamp: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct MessageRequest {
+    content: String,
 }
 
 #[function_component(Welcome)]
@@ -458,83 +477,284 @@ fn channel_create() -> Html {
     }
 }
 
+fn setup_websocket(
+    channel_name: String,
+    messages: UseStateHandle<Vec<ChatMessage>>,
+    ws_state: UseStateHandle<Option<WebSocket>>,
+) -> Option<WebSocket> {
+    let ws_url = format!("ws://localhost:8080/channel/ws/{}", channel_name);
+    
+    match WebSocket::new(&ws_url) {
+        Ok(websocket) => {
+            // Set up open handler
+            let onopen = Closure::wrap(Box::new(move || {
+                gloo::console::log!("WebSocket connected");
+            }) as Box<dyn FnMut()>);
+            websocket.set_onopen(Some(onopen.as_ref().unchecked_ref()));
+            onopen.forget();
+
+            // Set up close handler
+            let ws_url_clone = ws_url.clone();
+            let messages_clone = messages.clone();
+            let ws_state_clone = ws_state.clone();
+            let onclose = Closure::wrap(Box::new(move |_| {
+                gloo::console::log!("WebSocket closed, attempting to reconnect...");
+                
+                let ws_url = ws_url_clone.clone();
+                let messages = messages_clone.clone();
+                let ws_state = ws_state_clone.clone();
+                
+                // Attempt to reconnect after 3 seconds
+                spawn_local(async move {
+                    TimeoutFuture::new(3_000).await;
+                    if let Ok(new_ws) = WebSocket::new(&ws_url) {
+                        ws_state.set(Some(new_ws));
+                    }
+                });
+            }) as Box<dyn FnMut(JsValue)>);
+            websocket.set_onclose(Some(onclose.as_ref().unchecked_ref()));
+            onclose.forget();
+
+            // Set up message handler
+            let messages_clone = messages.clone();
+            let onmessage = Closure::wrap(Box::new(move |event: MessageEvent| {
+                if let Some(text) = event.data().as_string() {
+                    if text == "ping" {
+                        return;
+                    }
+
+                    let mut current_messages = (*messages_clone).clone();
+                    gloo::console::log!("Current messages before update:", current_messages.len());
+                    
+                    let new_message = if text.contains(" joined the chat") {
+                        ChatMessage {
+                            username: "System".to_string(),
+                            message: text,
+                            timestamp: chrono::Local::now()
+                                .format("%Y-%m-%d %H:%M")
+                                .to_string(),
+                        }
+                    } else if let Some((username, msg)) = text.split_once(':') {
+                        ChatMessage {
+                            username: username.to_string(),
+                            message: msg.trim().to_string(),
+                            timestamp: chrono::Local::now()
+                                .format("%Y-%m-%d %H:%M")
+                                .to_string(),
+                        }
+                    } else {
+                        return;
+                    };
+
+                    gloo::console::log!("Adding new message");
+                    current_messages.push(new_message);
+                    gloo::console::log!("Messages after update:", current_messages.len());
+                    messages_clone.set(current_messages);
+                }
+            }) as Box<dyn FnMut(MessageEvent)>);
+            websocket.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
+            onmessage.forget();
+
+            Some(websocket)
+        }
+        Err(err) => {
+            gloo::console::log!("WebSocket connection failed:", err);
+            None
+        }
+    }
+}
+
+
 #[function_component(ChatRoom)]
 fn chat_room() -> Html {
     let error = use_state(|| String::new());
-    let current_channel = use_state(|| None::<String>);
-    let message = use_state(String::new);
-    let messages = use_state(|| Vec::<String>::new());
-        
+    let current_channel = use_state(|| None::<Channel>);
+    let message = use_state(String::new);  // Current input message
+    let ws = use_state(|| None::<WebSocket>);
+    let messages = use_state(|| Vec::<ChatMessage>::new());  // Chat history
+
+    // Initial channel setup
     {
         let current_channel = current_channel.clone();
         let error = error.clone();
-        
-        use_effect_with_deps(move |_| {
-            let stored_channel = LocalStorage::get("selected_channel").unwrap_or(None);
-            current_channel.set(stored_channel);
-            spawn_local(async move {
-                // let response = Request::get(&format!("http://localhost:8080/channel/{}", channel_id))
-                //     .send()
-                //     .await;
 
-                // match response {
-                //     Ok(resp) if resp.ok() => {
-                //         match resp.json::<Channel>().await {
-                //             Ok(channel_data) => current_channel.set(Some(channel_data)),
-                //             Err(_) => error.set("Error loading channel".to_string()),
-                //         }
-                //     }
-                //     _ => {
-                //         error.set("Could not load channel".to_string());
-                //     }
-                // }
-            });
-            || ()
-        }, ());
+        use_effect_with_deps(
+            move |_| {
+                spawn_local(async move {
+                    let stored_channel_name: Option<String> = LocalStorage::get("selected_channel").ok();
+                    
+                    if let Some(channel_name) = stored_channel_name {
+                        let response = Request::get(&format!("http://localhost:8080/channel/enter/{}", channel_name))
+                            .send()
+                            .await;
+
+                        match response {
+                            Ok(resp) => {
+                                match resp.status() {
+                                    200 => {
+                                        current_channel.set(Some(Channel {
+                                            id: 0,
+                                            name: channel_name,
+                                            owner: String::new()
+                                        }));
+                                    },
+                                    401 => {
+                                        error.set("Please log in first".to_string());
+                                        window().location().set_href("/login").unwrap();
+                                    },
+                                    404 => {
+                                        error.set(format!("Channel '{}' not found", channel_name));
+                                    },
+                                    _ => {
+                                        error.set("Error connecting to channel".to_string());
+                                    }
+                                }
+                            },
+                            Err(e) => {
+                                error.set(format!("Network error: {}", e));
+                            }
+                        }
+                    } else {
+                        error.set("No channel selected".to_string());
+                    }
+                });
+
+                || ()
+            },
+            (),
+        );
     }
+
+
+// Fetch chat history
+{
+    let messages = messages.clone();
+    let error = error.clone();
+    let channel_state = current_channel.clone();
+
+// In the history fetch effect
+use_effect_with_deps(
+    move |_| {
+        if let Some(channel) = (*channel_state).clone() {
+            spawn_local(async move {
+                gloo::console::log!("=== FETCHING CHAT HISTORY ===");
+                gloo::console::log!("Channel name:", &channel.name);
+                
+                let response = Request::get(&format!("http://localhost:8080/channel/history/{}", channel.name))
+                    .send()
+                    .await;
+
+                match response {
+                    Ok(resp) => {
+                        gloo::console::log!("Response status:", resp.status());
+                        match resp.json::<Vec<ChatMessage>>().await {
+                            Ok(history) => {
+                                gloo::console::log!("Raw history count:", history.len());
+                                for msg in &history {
+                                    gloo::console::log!("History message:", 
+                                        format!("User: {}, Content: {}", msg.username, msg.message));
+                                }
+                                
+                                messages.set(history);
+                                gloo::console::log!("History set complete");
+                            }
+                            Err(e) => {
+                                gloo::console::log!("Failed to parse history:", e.to_string());
+                                error.set(format!("Failed to parse history: {}", e));
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        gloo::console::log!("Failed to fetch history:", e.to_string());
+                        error.set(format!("Failed to fetch history: {}", e));
+                    }
+                }
+            });
+        }
+        || ()
+    },
+    current_channel.clone(),
+);
+}
+
+// WebSocket setup
+{
+    let messages = messages.clone();
+    let ws = ws.clone();
+    let channel_state = current_channel.clone();
+
+    use_effect_with_deps(
+        move |_| {
+            if let Some(channel) = (*channel_state).clone() {
+                if let Some(websocket) = setup_websocket(channel.name, messages.clone(), ws.clone()) {
+                    // Setup ping
+                    let ws_clone = websocket.clone();
+                    spawn_local(async move {
+                        loop {
+                            TimeoutFuture::new(30_000).await;
+                            if ws_clone.send_with_str("ping").is_err() {
+                                break;
+                            }
+                        }
+                    });
+
+                    ws.set(Some(websocket));
+                }
+            }
+            || ()
+        },
+        current_channel.clone(),
+    );
+}
+
+// Message sending
+let send_message = {
+    let message = message.clone();
+    let ws = ws.clone();
+    let messages = messages.clone();  // Clone messages state
+
+    move || {
+        let msg = (*message).clone();
+        if !msg.is_empty() {
+            if let Some(websocket) = &*ws {
+                gloo::console::log!("Sending message:", &msg);
+                if websocket.send_with_str(&msg).is_ok() {
+                    // Don't clear the message input until we know the send was successful
+                    message.set(String::new());
+                    
+                    // Don't manually add the message here - it will come back through 
+                    // the WebSocket and be added by the onmessage handler
+                }
+            }
+        }
+    }
+};
 
     let on_message_change = {
         let message = message.clone();
-        Callback::from(move |e: Event| {
+        Callback::from(move |e: InputEvent| {
             if let Some(input) = e.target_dyn_into::<HtmlInputElement>() {
                 message.set(input.value());
             }
         })
     };
 
-    let on_send = {
-        let message = message.clone();
-        let messages = messages.clone();
-        
-        Callback::from(move |_| {
-            let message_state = message.clone();
-            let messages_state = messages.clone();
-            let msg = (*message).clone();
-            
-            if !msg.is_empty() {
-                spawn_local(async move {
-                    // let response = Request::post(&format!("http://localhost:8080/channel/{}/message", channel_id))
-                    //     .header("Content-Type", "application/json")
-                    //     .json(&serde_json::json!({ "content": msg.clone() }))
-                    //     .unwrap()
-                    //     .send()
-                    //     .await;
-
-                    // if let Ok(resp) = response {
-                    //     if resp.ok() {
-                    //         let mut new_messages = (*messages_state).clone();
-                    //         new_messages.push(msg);
-                    //         messages_state.set(new_messages);
-                    //         message_state.set(String::new());
-                    //     }
-                    // }
-                });
+    let on_keypress = {
+        let send_message = send_message.clone();
+        Callback::from(move |e: KeyboardEvent| {
+            if e.key() == "Enter" {
+                e.prevent_default();
+                send_message();
             }
         })
     };
 
+    let on_send = {
+        let send_message = send_message.clone();
+        Callback::from(move |_| send_message())
+    };
+
     let on_exit = Callback::from(move |_| {
-        LocalStorage::delete("selected_channel");
         window().location().set_href("/channel_list").unwrap();
     });
 
@@ -542,37 +762,46 @@ fn chat_room() -> Html {
         Some(channel) => html! {
             <div class="chat-container">
                 <div class="chat-header">
-                    <div class="header-left">
-                        <button onclick={on_exit} class="exit-button">{"Exit"}</button>
-                        <h2 class="channel-title">
-                            {format!(
-                                "Channel: {}",
-                                match &*current_channel {
-                                    Some(channel) => channel.clone(),
-                                    None => "None".to_string(), // Default message if no channel is selected
-                                }
-                            )}
-                        </h2>
-                    </div>
+                    <h2 class="channel-title">{format!("Channel: {}", channel.name)}</h2>
+                    <button onclick={on_exit} class="button exit-button">{"Exit"}</button>
                 </div>
-                {if !(*error).is_empty() {
+                {if !error.is_empty() {
                     html! { <div class="error-message">{&*error}</div> }
                 } else {
                     html! {}
                 }}
                 <div class="chat-messages">
-                    {for messages.iter().map(|msg| {
-                        html! {
-                            <div class="message">{msg}</div>
-                        }
-                    })}
+                    {for (*messages).iter()
+                        .filter(|msg| !msg.message.contains("ping"))
+                        .map(|msg| {
+                            if msg.username == "System" {
+                                html! {
+                                    <div class="message system-message">
+                                        <div class="content">{&msg.message}</div>
+                                        <span class="timestamp">{&msg.timestamp}</span>
+                                    </div>
+                                }
+                            } else {
+                                html! {
+                                    <div class="message" key={format!("{}-{}", msg.timestamp, msg.username)}>
+                                        <div class="message-header">
+                                            <span class="username">{&msg.username}</span>
+                                            <span class="timestamp">{&msg.timestamp}</span>
+                                        </div>
+                                        <div class="content">{&msg.message}</div>
+                                    </div>
+                                }
+                            }
+                        })
+                    }
                 </div>
                 <div class="chat-input">
                     <input
                         type="text"
                         placeholder="Type a message..."
                         value={(*message).clone()}
-                        onchange={on_message_change}
+                        oninput={on_message_change}
+                        onkeypress={on_keypress}
                         class="message-input"
                     />
                     <button onclick={on_send} class="send-button">{"Send"}</button>
@@ -582,15 +811,17 @@ fn chat_room() -> Html {
         None => html! {
             <div class="loading-container">
                 <h2>{"Loading channel..."}</h2>
-                {if !(*error).is_empty() {
+                {if !error.is_empty() {
                     html! { <div class="error-message">{&*error}</div> }
                 } else {
                     html! {}
                 }}
             </div>
-        }
+        },
     }
 }
+
+
 
 #[function_component(Index)]
 fn index() -> Html {

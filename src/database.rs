@@ -1,26 +1,28 @@
 use sqlx::{sqlite::{self, SqlitePoolOptions}, Pool, Sqlite, migrate::MigrateDatabase};
 use sled;
 use sled::Db;
-use chrono::Utc;
+// use chrono::Utc;
 
 use crate::channel::ChatMessage;
 
 // In database.rs
+// timestamp 优先 username只储存不排序
 pub fn append_chat_message_sled(
     sled_db: &Db,
     channel_name: &str,
     username: &str,
     message: &str,
 ) -> Result<(), sled::Error> {
-    let timestamp = Utc::now().to_rfc3339();
+    let timestamp = chrono::Local::now()
+        .format("%Y-%m-%d %H:%M")
+        .to_string();
     
-    // Use channel name as the tree name
+    // Rest of the function remains the same
     let tree = sled_db.open_tree(channel_name)?;
+    let key = format!("{}:{}", timestamp, username);
+    let value = format!("{}:{}", username, message);
     
-    // Use timestamp as key
-    let key = format!("{}:{}", username, timestamp);
-    tree.insert(key.as_bytes(), message.as_bytes())?;
-
+    tree.insert(key.as_bytes(), value.as_bytes())?;
     Ok(())
 }
 
@@ -28,27 +30,58 @@ pub fn get_chat_history_sled(
     sled_db: &Db,
     channel_name: &str,
 ) -> Result<Vec<ChatMessage>, sled::Error> {
+    println!("=== BEGIN CHAT HISTORY FETCH ===");
     println!("Getting history for channel: {}", channel_name);
-    let tree = sled_db.open_tree(channel_name)?;
-    let mut messages = Vec::new();
+    
+    let tree = match sled_db.open_tree(channel_name) {
+        Ok(t) => t,
+        Err(e) => return Err(e),
+    };
 
+    let mut messages = Vec::new();
+    
     for item in tree.iter() {
-        let (key, value) = item?;
-        let key_str = String::from_utf8(key.to_vec()).unwrap_or_default();
-        let value_str = String::from_utf8(value.to_vec()).unwrap_or_default();
-        
-        println!("Decoded - Key: {}, Value: {}", key_str, value_str);
-        // Split only on the first colon
-        if let Some((username, timestamp)) = key_str.split_once(':') {
-            messages.push(ChatMessage {
-                timestamp: timestamp.to_string(),
-                username: username.to_string(),
-                message: value_str,
-            });
+        match item {
+            Ok((key, value)) => {
+                if let (Ok(key_str), Ok(value_str)) = (
+                    String::from_utf8(key.to_vec()),
+                    String::from_utf8(value.to_vec())
+                ) {
+                    println!("\nProcessing message:");
+                    println!("Key: {}", key_str);
+                    println!("Value: {}", value_str);
+                    
+                    // Split the key into timestamp and username
+                    // Format is "YYYY-MM-DD HH:MM:username"
+                    if let Some(last_colon_pos) = key_str.rfind(':') {
+                        let (timestamp, username) = key_str.split_at(last_colon_pos);
+                        let username = &username[1..]; // Remove the leading ':'
+                        
+                        // Get message from value
+                        // Value format is "username:message"
+                        if let Some((_, message)) = value_str.split_once(':') {
+                            println!("✓ Parsed successfully:");
+                            println!("  Timestamp: {}", timestamp);
+                            println!("  Username: {}", username);
+                            println!("  Message: {}", message);
+                            
+                            if message != "ping" {
+                                let chat_message = ChatMessage {
+                                    timestamp: timestamp.to_string(),
+                                    username: username.to_string(),
+                                    message: message.to_string(),
+                                };
+                                messages.push(chat_message);
+                            }
+                        }
+                    }
+                }
+            }
+            Err(e) => println!("Error reading message: {}", e),
         }
     }
 
-    println!("Total messages found: {}", messages.len());
+    messages.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
     Ok(messages)
 }
 

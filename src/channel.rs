@@ -1,17 +1,13 @@
 use actix_session::Session;
 use actix_web::{web, Responder, HttpResponse};
 use sqlx::{Pool, Sqlite};
-use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use crate::user::check_auth;
-use actix_web::HttpRequest;
-use crate::websocket::ChatState;
-use actix_web_actors::ws;
 use crate::database::get_chat_history_sled;
-use crate::websocket::ChatSession;
 use serde_json::json;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct ChatMessage {
     pub timestamp: String,
     pub username: String,
@@ -161,7 +157,12 @@ pub async fn channel_history(
     match get_chat_history_sled(&sled_db, channel_name) {
         Ok(messages) => {
             println!("Found {} messages", messages.len());
-            HttpResponse::Ok().json(messages)  // This will now return properly formatted JSON
+            // Print each message individually
+            for msg in &messages {
+                println!("Message - User: {}, Content: {}, Time: {}", 
+                    msg.username, msg.message, msg.timestamp);
+            }
+            HttpResponse::Ok().json(messages)
         },
         Err(err) => {
             println!("Error getting chat history: {:?}", err);

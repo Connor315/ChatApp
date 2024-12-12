@@ -9,10 +9,7 @@ use crate::Sqlite;
 use crate::Pool;
 use crate::user;
 use crate::database::append_chat_message_sled;
-// Add this at top of websocket.rs
-use actix::prelude::*;
 
-// Add this struct
 #[derive(Message)]
 #[rtype(result = "()")]
 struct ChatMessage {
@@ -82,7 +79,7 @@ impl ChatSession {
     }
 
     /// Broadcast a message to all connected clients
-    fn broadcast_message(&self, message: &str, ctx: &mut ws::WebsocketContext<Self>) {
+    fn broadcast_message(&self, message: &str, _ctx: &mut ws::WebsocketContext<Self>) {
         // Format the message
         let msg = format!("{}: {}", self.user_name, message);
         

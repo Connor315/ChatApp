@@ -18,3 +18,10 @@ actix = "0.13"
 chrono = "0.4"
 env_logger = "0.10"
 serde_json = "1.0"
+gloo-net = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = ["HtmlInputElement"] }
+actix-cors = "0.7"
+gloo = { version = "0.8", features = ["futures"] }
+yew = "0.20"
+futures-util = "0.3"
