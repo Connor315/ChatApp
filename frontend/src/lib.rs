@@ -625,110 +625,109 @@ fn chat_room() -> Html {
         );
     }
 
+    // Fetch chat history
+    {
+        let messages = messages.clone();
+        let error = error.clone();
+        let channel_state = current_channel.clone();
 
-// Fetch chat history
-{
-    let messages = messages.clone();
-    let error = error.clone();
-    let channel_state = current_channel.clone();
+        // In the history fetch effect
+        use_effect_with_deps(
+            move |_| {
+                if let Some(channel) = (*channel_state).clone() {
+                    spawn_local(async move {
+                        gloo::console::log!("=== FETCHING CHAT HISTORY ===");
+                        gloo::console::log!("Channel name:", &channel.name);
+                        
+                        let response = Request::get(&format!("http://localhost:8080/channel/history/{}", channel.name))
+                            .send()
+                            .await;
 
-// In the history fetch effect
-use_effect_with_deps(
-    move |_| {
-        if let Some(channel) = (*channel_state).clone() {
-            spawn_local(async move {
-                gloo::console::log!("=== FETCHING CHAT HISTORY ===");
-                gloo::console::log!("Channel name:", &channel.name);
-                
-                let response = Request::get(&format!("http://localhost:8080/channel/history/{}", channel.name))
-                    .send()
-                    .await;
-
-                match response {
-                    Ok(resp) => {
-                        gloo::console::log!("Response status:", resp.status());
-                        match resp.json::<Vec<ChatMessage>>().await {
-                            Ok(history) => {
-                                gloo::console::log!("Raw history count:", history.len());
-                                for msg in &history {
-                                    gloo::console::log!("History message:", 
-                                        format!("User: {}, Content: {}", msg.username, msg.message));
+                        match response {
+                            Ok(resp) => {
+                                gloo::console::log!("Response status:", resp.status());
+                                match resp.json::<Vec<ChatMessage>>().await {
+                                    Ok(history) => {
+                                        gloo::console::log!("Raw history count:", history.len());
+                                        for msg in &history {
+                                            gloo::console::log!("History message:", 
+                                                format!("User: {}, Content: {}", msg.username, msg.message));
+                                        }
+                                        
+                                        messages.set(history);
+                                        gloo::console::log!("History set complete");
+                                    }
+                                    Err(e) => {
+                                        gloo::console::log!("Failed to parse history:", e.to_string());
+                                        error.set(format!("Failed to parse history: {}", e));
+                                    }
                                 }
-                                
-                                messages.set(history);
-                                gloo::console::log!("History set complete");
                             }
                             Err(e) => {
-                                gloo::console::log!("Failed to parse history:", e.to_string());
-                                error.set(format!("Failed to parse history: {}", e));
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        gloo::console::log!("Failed to fetch history:", e.to_string());
-                        error.set(format!("Failed to fetch history: {}", e));
-                    }
-                }
-            });
-        }
-        || ()
-    },
-    current_channel.clone(),
-);
-}
-
-// WebSocket setup
-{
-    let messages = messages.clone();
-    let ws = ws.clone();
-    let channel_state = current_channel.clone();
-
-    use_effect_with_deps(
-        move |_| {
-            if let Some(channel) = (*channel_state).clone() {
-                if let Some(websocket) = setup_websocket(channel.name, messages.clone(), ws.clone()) {
-                    // Setup ping
-                    let ws_clone = websocket.clone();
-                    spawn_local(async move {
-                        loop {
-                            TimeoutFuture::new(30_000).await;
-                            if ws_clone.send_with_str("ping").is_err() {
-                                break;
+                                gloo::console::log!("Failed to fetch history:", e.to_string());
+                                error.set(format!("Failed to fetch history: {}", e));
                             }
                         }
                     });
-
-                    ws.set(Some(websocket));
                 }
-            }
-            || ()
-        },
-        current_channel.clone(),
-    );
-}
+                || ()
+            },
+            current_channel.clone(),
+        );
+    }
 
-// Message sending
-let send_message = {
-    let message = message.clone();
-    let ws = ws.clone();
-    let messages = messages.clone();  // Clone messages state
+    // // WebSocket setup
+    // {
+    //     let messages = messages.clone();
+    //     let ws = ws.clone();
+    //     let channel_state = current_channel.clone();
 
-    move || {
-        let msg = (*message).clone();
-        if !msg.is_empty() {
-            if let Some(websocket) = &*ws {
-                gloo::console::log!("Sending message:", &msg);
-                if websocket.send_with_str(&msg).is_ok() {
-                    // Don't clear the message input until we know the send was successful
-                    message.set(String::new());
-                    
-                    // Don't manually add the message here - it will come back through 
-                    // the WebSocket and be added by the onmessage handler
+    //     use_effect_with_deps(
+    //         move |_| {
+    //             if let Some(channel) = (*channel_state).clone() {
+    //                 if let Some(websocket) = setup_websocket(channel.name, messages.clone(), ws.clone()) {
+    //                     // Setup ping
+    //                     let ws_clone = websocket.clone();
+    //                     spawn_local(async move {
+    //                         loop {
+    //                             TimeoutFuture::new(30_000).await;
+    //                             if ws_clone.send_with_str("ping").is_err() {
+    //                                 break;
+    //                             }
+    //                         }
+    //                     });
+
+    //                     ws.set(Some(websocket));
+    //                 }
+    //             }
+    //             || ()
+    //         },
+    //         current_channel.clone(),
+    //     );
+    // }
+
+    // Message sending
+    let send_message = {
+        let message = message.clone();
+        let ws = ws.clone();
+        let messages = messages.clone();  // Clone messages state
+
+        move || {
+            let msg = (*message).clone();
+            if !msg.is_empty() {
+                if let Some(websocket) = &*ws {
+                    gloo::console::log!("Sending message:", &msg);
+                    if websocket.send_with_str(&msg).is_ok() {
+                        // Don't clear the message input until we know the send was successful
+                        message.set(String::new());
+                        
+                        // Don't manually add the message here - it will come back through 
+                        // the WebSocket and be added by the onmessage handler
+                    }
                 }
             }
         }
-    }
-};
+    };
 
     let on_message_change = {
         let message = message.clone();
