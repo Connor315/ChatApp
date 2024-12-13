@@ -676,41 +676,45 @@ fn chat_room() -> Html {
         );
     }
 
-    // // WebSocket setup
-    // {
-    //     let messages = messages.clone();
-    //     let ws = ws.clone();
-    //     let channel_state = current_channel.clone();
+    // WebSocket setup
+    {
+        let messages_c1 = messages.clone();
+        let messages_c2 = messages.clone();
+        let ws = ws.clone();
+        let channel_state = current_channel.clone();
 
-    //     use_effect_with_deps(
-    //         move |_| {
-    //             if let Some(channel) = (*channel_state).clone() {
-    //                 if let Some(websocket) = setup_websocket(channel.name, messages.clone(), ws.clone()) {
-    //                     // Setup ping
-    //                     let ws_clone = websocket.clone();
-    //                     spawn_local(async move {
-    //                         loop {
-    //                             TimeoutFuture::new(30_000).await;
-    //                             if ws_clone.send_with_str("ping").is_err() {
-    //                                 break;
-    //                             }
-    //                         }
-    //                     });
+        use_effect_with_deps(
+            move |_| {
+                if messages_c1.len() != 0 {
+                    if let Some(channel) = (*channel_state).clone() {
+                        if let Some(websocket) = setup_websocket(channel.name, messages_c1.clone(), ws.clone()) {
+                            // Setup ping
+                            let ws_clone = websocket.clone();
+                            spawn_local(async move {
+                                loop {
+                                    TimeoutFuture::new(30_000).await;
+                                    if ws_clone.send_with_str("ping").is_err() {
+                                        break;
+                                    }
+                                }
+                            });
 
-    //                     ws.set(Some(websocket));
-    //                 }
-    //             }
-    //             || ()
-    //         },
-    //         current_channel.clone(),
-    //     );
-    // }
+                            ws.set(Some(websocket));
+                        }
+                    }
+                }
+                
+                || ()
+            },
+            (current_channel.clone(), !messages_c2.is_empty()),
+        );
+    }
 
     // Message sending
     let send_message = {
         let message = message.clone();
         let ws = ws.clone();
-        let messages = messages.clone();  // Clone messages state
+        // let messages = messages.clone();  // Clone messages state
 
         move || {
             let msg = (*message).clone();
