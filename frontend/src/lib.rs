@@ -765,8 +765,8 @@ fn chat_room() -> Html {
         Some(channel) => html! {
             <div class="chat-container">
                 <div class="chat-header">
+                    <button onclick={on_exit} class="exit-button">{"Exit"}</button>
                     <h2 class="channel-title">{format!("Channel: {}", channel.name)}</h2>
-                    <button onclick={on_exit} class="button exit-button">{"Exit"}</button>
                 </div>
                 {if !error.is_empty() {
                     html! { <div class="error-message">{&*error}</div> }
