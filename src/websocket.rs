@@ -210,7 +210,7 @@ pub async fn chat_route(
 
     // Execute query and handle the result
     let channel_name_ref = channel_name.as_ref();
-    let query = sqlx::query!("SELECT * FROM Channel WHERE Name = ?", channel_name_ref);
+    let query = sqlx::query("SELECT * FROM Channel WHERE Name = ?").bind(channel_name_ref);
     let channel_exists = query.fetch_optional(db_ref).await.map_err(|e| {
         println!("Database error: {}", e);
         actix_web::error::ErrorInternalServerError(e)

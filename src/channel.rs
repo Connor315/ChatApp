@@ -31,8 +31,6 @@ pub struct ChannelPath {
     name: String,
 }
 
-
-
 pub async fn channel_create(db: web::Data<Pool<Sqlite>>, session: Session, info: web::Json<ChannelRequest>) -> impl Responder {
     if !check_auth(&session).is_ok() {
         return HttpResponse::Unauthorized().json("User not logged in.")
@@ -99,6 +97,7 @@ pub async fn channel_create(db: web::Data<Pool<Sqlite>>, session: Session, info:
 //         Err(_) => HttpResponse::InternalServerError().finish(),
 //     }
 // }
+
 pub async fn channel_enter(
     db: web::Data<Pool<Sqlite>>,
     info: web::Path<ChannelRequest>,
@@ -112,7 +111,8 @@ pub async fn channel_enter(
     let channel_name = &info.name;
 
     // Check if channel exists
-    match sqlx::query!("SELECT * FROM Channel WHERE Name = ?", channel_name)
+    match sqlx::query("SELECT * FROM Channel WHERE Name = ?")
+        .bind(channel_name)
         .fetch_optional(db.get_ref())
         .await
     {
@@ -134,11 +134,6 @@ pub async fn channel_enter(
         }
     }
 }
-
-
-
-
-
 
 // Optional?
 // pub async fn channel_exit(db: web::Data<Pool<Sqlite>>, info: web::Path<ChannelRequest>) -> impl Responder {
