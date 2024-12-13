@@ -487,24 +487,22 @@ fn setup_websocket(
     match WebSocket::new(&ws_url) {
         Ok(websocket) => {
             // Set up open handler
-            let onopen = Closure::wrap(Box::new(move || {
+            let onopen = Closure::wrap(Box::new(|| {
                 gloo::console::log!("WebSocket connected");
             }) as Box<dyn FnMut()>);
             websocket.set_onopen(Some(onopen.as_ref().unchecked_ref()));
             onopen.forget();
 
             // Set up close handler
-            let ws_url_clone = ws_url.clone();
-            let messages_clone = messages.clone();
-            let ws_state_clone = ws_state.clone();
+            let ws_url = ws_url.clone();
+            let ws_state_reconnect = ws_state.clone();
+            
             let onclose = Closure::wrap(Box::new(move |_| {
                 gloo::console::log!("WebSocket closed, attempting to reconnect...");
                 
-                let ws_url = ws_url_clone.clone();
-                let messages = messages_clone.clone();
-                let ws_state = ws_state_clone.clone();
+                let ws_url = ws_url.clone();  // Clone inside closure to make it FnMut
+                let ws_state = ws_state_reconnect.clone();  // Clone inside closure
                 
-                // Attempt to reconnect after 3 seconds
                 spawn_local(async move {
                     TimeoutFuture::new(3_000).await;
                     if let Ok(new_ws) = WebSocket::new(&ws_url) {
@@ -516,14 +514,15 @@ fn setup_websocket(
             onclose.forget();
 
             // Set up message handler
-            let messages_clone = messages.clone();
+            // Only clone messages once for the message handler
+            let messages_handler = messages.clone();
             let onmessage = Closure::wrap(Box::new(move |event: MessageEvent| {
                 if let Some(text) = event.data().as_string() {
                     if text == "ping" {
                         return;
                     }
 
-                    let mut current_messages = (*messages_clone).clone();
+                    let mut current_messages = (*messages_handler).clone();
                     gloo::console::log!("Current messages before update:", current_messages.len());
                     
                     let new_message = if text.contains(" joined the chat") {
@@ -531,7 +530,7 @@ fn setup_websocket(
                             username: "System".to_string(),
                             message: text,
                             timestamp: chrono::Local::now()
-                                .format("%Y-%m-%d %H:%M")
+                                .format("%Y-%m-%d %H:%M:%S%.3f")
                                 .to_string(),
                         }
                     } else if let Some((username, msg)) = text.split_once(':') {
@@ -539,7 +538,7 @@ fn setup_websocket(
                             username: username.to_string(),
                             message: msg.trim().to_string(),
                             timestamp: chrono::Local::now()
-                                .format("%Y-%m-%d %H:%M")
+                                .format("%Y-%m-%d %H:%M:%S%.3f")
                                 .to_string(),
                         }
                     } else {
@@ -549,7 +548,7 @@ fn setup_websocket(
                     gloo::console::log!("Adding new message");
                     current_messages.push(new_message);
                     gloo::console::log!("Messages after update:", current_messages.len());
-                    messages_clone.set(current_messages);
+                    messages_handler.set(current_messages);
                 }
             }) as Box<dyn FnMut(MessageEvent)>);
             websocket.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
