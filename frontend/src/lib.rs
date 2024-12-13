@@ -571,6 +571,7 @@ fn chat_room() -> Html {
     let message = use_state(String::new);  // Current input message
     let ws = use_state(|| None::<WebSocket>);
     let messages = use_state(|| Vec::<ChatMessage>::new());  // Chat history
+    let history_fetch = use_state(|| false);
 
     // Initial channel setup
     {
@@ -626,6 +627,7 @@ fn chat_room() -> Html {
 
     // Fetch chat history
     {
+        let history_fetch = history_fetch.clone();
         let messages = messages.clone();
         let error = error.clone();
         let channel_state = current_channel.clone();
@@ -654,6 +656,7 @@ fn chat_room() -> Html {
                                         }
                                         
                                         messages.set(history);
+                                        history_fetch.set(true);
                                         gloo::console::log!("History set complete");
                                     }
                                     Err(e) => {
@@ -678,13 +681,13 @@ fn chat_room() -> Html {
     // WebSocket setup
     {
         let messages_c1 = messages.clone();
-        let messages_c2 = messages.clone();
+        let history_fetch_clone = history_fetch.clone();
         let ws = ws.clone();
         let channel_state = current_channel.clone();
 
         use_effect_with_deps(
             move |_| {
-                if messages_c1.len() != 0 {
+                if *history_fetch_clone {
                     if let Some(channel) = (*channel_state).clone() {
                         if let Some(websocket) = setup_websocket(channel.name, messages_c1.clone(), ws.clone()) {
                             // Setup ping
@@ -705,7 +708,7 @@ fn chat_room() -> Html {
                 
                 || ()
             },
-            (current_channel.clone(), !messages_c2.is_empty()),
+            (current_channel.clone(), history_fetch.clone()),
         );
     }
 
@@ -756,7 +759,15 @@ fn chat_room() -> Html {
         Callback::from(move |_| send_message())
     };
 
+    let cur_channel = current_channel.clone();
+
     let on_exit = Callback::from(move |_| {
+        cur_channel.set(None);
+        history_fetch.set(false);
+        match LocalStorage::set("selected_channel", "") {
+            Ok(_) => gloo::console::log!("Channel clear"),
+            Err(_) => gloo::console::log!("Error"),
+        }
         window().location().set_href("/channel_list").unwrap();
     });
 
