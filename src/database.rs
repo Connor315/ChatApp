@@ -1,28 +1,22 @@
 use sqlx::{sqlite::{self, SqlitePoolOptions}, Pool, Sqlite, migrate::MigrateDatabase};
 use sled;
 use sled::Db;
-// use chrono::Utc;
+use uuid::Uuid;
 
 use crate::channel::ChatMessage;
 
-// In database.rs
-// timestamp 优先 username只储存不排序
-pub fn append_chat_message_sled(
-    sled_db: &Db,
-    channel_name: &str,
-    username: &str,
-    message: &str,
-) -> Result<(), sled::Error> {
+pub fn append_chat_message_sled(sled_db: &Db, channel_name: &str, username: &str, message: &str) -> Result<(), sled::Error> {
     let timestamp = chrono::Local::now()
-        .format("%Y-%m-%d %H:%M")
+        .format("%Y-%m-%d %H:%M:%S%.3f")
         .to_string();
     
-    // Rest of the function remains the same
+    let unique_id = Uuid::new_v4();
     let tree = sled_db.open_tree(channel_name)?;
-    let key = format!("{}:{}", timestamp, username);
+    let key = format!("{}:{}", timestamp, unique_id);
     let value = format!("{}:{}", username, message);
     
     tree.insert(key.as_bytes(), value.as_bytes())?;
+    tree.flush()?;
     Ok(())
 }
 
@@ -54,12 +48,11 @@ pub fn get_chat_history_sled(
                     // Split the key into timestamp and username
                     // Format is "YYYY-MM-DD HH:MM:username"
                     if let Some(last_colon_pos) = key_str.rfind(':') {
-                        let (timestamp, username) = key_str.split_at(last_colon_pos);
-                        let username = &username[1..]; // Remove the leading ':'
+                        let (timestamp, _) = key_str.split_at(last_colon_pos); // Remove the leading ':'
                         
                         // Get message from value
                         // Value format is "username:message"
-                        if let Some((_, message)) = value_str.split_once(':') {
+                        if let Some((username, message)) = value_str.split_once(':') {
                             println!("✓ Parsed successfully:");
                             println!("  Timestamp: {}", timestamp);
                             println!("  Username: {}", username);

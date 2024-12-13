@@ -1,9 +1,9 @@
 ## Real-Time Chat Application Final Report
 
 #### Team Members
-- Chen Wang (wangc425 | 1006058926)
+- Chen Wang (wangc425 | 1006058926 | chennn.wang@mail.utoronto.ca)
 - Kangzhi Gao (gaokangz | 1006307827 | kangzhi.gao@mail.utoronto.ca)
-- Yalin Tuo (tuoyalin | 1006033196)
+- Yalin Tuo (tuoyalin | 1006033196 | yalin.tuo@mail.utoronto.ca)
 
 <!-- Motivation: What motivated your team to spend time on this project? An excellent project idea is satisfying and fun to work on, and fills a gap that may not be easily found in the Rust ecosystem. -->
 
@@ -63,7 +63,10 @@ Please follow these steps to set up and run the project:
 - TODO
 
 **Kangzhi Gao:**
-- TODO
+- Implemented database and user authentication
+- Implemented integration 
+- Implemented channel creation
+- Implemented frontend-backend integration
 
 **Yalin Tuo:**
 - TODO
