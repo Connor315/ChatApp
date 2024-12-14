@@ -24,6 +24,7 @@ use std::sync::{Arc, Mutex};
 use crate::websocket::ChatState;
 use actix_cors::Cors;
 use actix_web::http::header;
+use std::collections::HashMap;
 // pub async fn auth(session: Session) -> impl Responder {
 //     match check_auth(&session) {
 //         Ok(_) => HttpResponse::Ok().finish(),
@@ -65,10 +66,15 @@ async fn main() -> std::io::Result<()> {
     // let sled_db: Db = init_sled_db().await;
     let sled_db = web::Data::new(init_sled_db().await);
     let secret_key = Key::generate();
+    // let chat_state = web::Data::new(Arc::new(ChatState {
+    //     messages: Mutex::new(Vec::new()),
+    //     connected_users: Mutex::new(Vec::new()),
+    //     sessions: Mutex::new(Vec::new()),  // Add this
+    // }));
     let chat_state = web::Data::new(Arc::new(ChatState {
         messages: Mutex::new(Vec::new()),
         connected_users: Mutex::new(Vec::new()),
-        sessions: Mutex::new(Vec::new()),  // Add this
+        sessions: Mutex::new(HashMap::new()),
     }));
     
 
@@ -119,13 +125,11 @@ async fn main() -> std::io::Result<()> {
                     .route("/list", web::get().to(channel_list))
                     .route("/enter/{name}", web::get().to(channel_enter))
                     .route("/history/{name}", web::get().to(channel_history))
-                    .route("/ws/{channel_name}", web::get().to({
-                        let chat_state = chat_state.clone();
-                        let sled_db = sled_db.clone();
+                    .route("/ws/{channel_name}", web::get().to(
                         move |req, stream, path: web::Path<String>| {
                             websocket::chat_route(req, stream, chat_state.clone(), sled_db.clone(), path)
                         }
-                    }))
+                    ))
                 )
             .service(fs::Files::new("/", "./static"))
     })

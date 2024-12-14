@@ -9,6 +9,7 @@ use crate::Sqlite;
 use crate::Pool;
 use crate::user;
 use crate::database::append_chat_message_sled;
+use std::collections::HashMap;
 
 #[derive(Message)]
 #[rtype(result = "()")]
@@ -30,10 +31,16 @@ const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Shared state for storing messages and managing connected users
+// pub struct ChatState {
+//     pub messages: Mutex<Vec<(String, String, String)>>, // (timestamp, user, message)
+//     pub connected_users: Mutex<Vec<String>>,           // List of connected users
+//     pub sessions: Mutex<Vec<Addr<ChatSession>>>,
+// }
+
 pub struct ChatState {
     pub messages: Mutex<Vec<(String, String, String)>>, // (timestamp, user, message)
     pub connected_users: Mutex<Vec<String>>,           // List of connected users
-    pub sessions: Mutex<Vec<Addr<ChatSession>>>,
+    pub sessions: Mutex<HashMap<String, Vec<Addr<ChatSession>>>>, // Map of channel to sessions
 }
 
 /// Define the WebSocket connection structure
@@ -79,58 +86,101 @@ impl ChatSession {
     }
 
     /// Broadcast a message to all connected clients
-    fn broadcast_message(&self, message: &str, _ctx: &mut ws::WebsocketContext<Self>) {
-        // Format the message
-        let msg = format!("{}: {}", self.user_name, message);
+    // fn broadcast_message(&self, message: &str, _ctx: &mut ws::WebsocketContext<Self>) {
+    //     // Format the message
+    //     let msg = format!("{}: {}", self.user_name, message);
         
-        // Get all sessions and broadcast to them
-        if let Ok(sessions) = self.state.sessions.lock() {
-            for session in sessions.iter() {
-                session.do_send(ChatMessage { msg: msg.clone() });
+    //     // Get all sessions and broadcast to them
+    //     if let Ok(sessions) = self.state.sessions.lock() {
+    //         for session in sessions.iter() {
+    //             session.do_send(ChatMessage { msg: msg.clone() });
+    //         }
+    //     }
+    // }
+
+    fn broadcast_message(&self, message: &str, _ctx: &mut ws::WebsocketContext<Self>) {
+        let msg = format!("{}: {}", self.user_name, message);
+    
+        // Get sessions for the current channel
+        if let Ok(sessions_map) = self.state.sessions.lock() {
+            if let Some(sessions) = sessions_map.get(&self.channel_name) {
+                for session in sessions {
+                    session.do_send(ChatMessage { msg: msg.clone() });
+                }
             }
         }
     }
+    
+    
 }
 
 /// WebSocket message handler implementation for `ChatSession`
 impl Actor for ChatSession {
     type Context = ws::WebsocketContext<Self>;
 
+    // fn started(&mut self, ctx: &mut Self::Context) {
+    //     self.hb(ctx);
+    
+    //     // Store session address
+    //     if let Ok(mut sessions) = self.state.sessions.lock() {
+    //         sessions.push(ctx.address());
+    //     }
+    
+    //     // Add the user to the connected users list
+    //     {
+    //         let mut users = self.state.connected_users.lock().unwrap();
+    //         users.push(self.user_name.clone());
+    //     }
+    
+    //     // Broadcast join message
+    //     let join_message = format!("{} joined the chat", self.user_name);
+    //     self.broadcast_message(&join_message, ctx);
+    // }
+
+    // fn stopped(&mut self, ctx: &mut Self::Context) {
+    //     // Remove session
+    //     if let Ok(mut sessions) = self.state.sessions.lock() {
+    //         sessions.retain(|x| x != &ctx.address());
+    //     }
+    
+    //     // Remove the user from the connected users list
+    //     {
+    //         let mut users = self.state.connected_users.lock().unwrap();
+    //         users.retain(|user| user != &self.user_name);
+    //     }
+    
+    //     // Broadcast quit message
+    //     let quit_message = format!("{} left the chat", self.user_name);
+    //     self.broadcast_message(&quit_message, ctx);
+    // }
     fn started(&mut self, ctx: &mut Self::Context) {
         self.hb(ctx);
     
-        // Store session address
-        if let Ok(mut sessions) = self.state.sessions.lock() {
-            sessions.push(ctx.address());
+        if let Ok(mut sessions_map) = self.state.sessions.lock() {
+            sessions_map
+                .entry(self.channel_name.clone())
+                .or_insert_with(Vec::new)
+                .push(ctx.address());
         }
     
-        // Add the user to the connected users list
-        {
-            let mut users = self.state.connected_users.lock().unwrap();
-            users.push(self.user_name.clone());
-        }
-    
-        // Broadcast join message
         let join_message = format!("{} joined the chat", self.user_name);
         self.broadcast_message(&join_message, ctx);
     }
-
-    fn stopped(&mut self, ctx: &mut Self::Context) {
-        // Remove session
-        if let Ok(mut sessions) = self.state.sessions.lock() {
-            sessions.retain(|x| x != &ctx.address());
+    
+    fn stopped(&mut self, _ctx: &mut Self::Context) {
+        if let Ok(mut sessions_map) = self.state.sessions.lock() {
+            if let Some(sessions) = sessions_map.get_mut(&self.channel_name) {
+                sessions.retain(|addr| addr != &_ctx.address());
+                if sessions.is_empty() {
+                    sessions_map.remove(&self.channel_name);
+                }
+            }
         }
     
-        // Remove the user from the connected users list
-        {
-            let mut users = self.state.connected_users.lock().unwrap();
-            users.retain(|user| user != &self.user_name);
-        }
-    
-        // Broadcast quit message
         let quit_message = format!("{} left the chat", self.user_name);
-        self.broadcast_message(&quit_message, ctx);
+        self.broadcast_message(&quit_message, _ctx);
     }
+    
 }
 
 /// Implement `StreamHandler` to handle the incoming WebSocket messages
