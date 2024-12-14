@@ -39,7 +39,7 @@ const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
 pub struct ChatState {
     pub messages: Mutex<Vec<(String, String, String)>>, // (timestamp, user, message)
-    pub connected_users: Mutex<Vec<String>>,           // List of connected users
+    // pub connected_users: Mutex<Vec<String>>,           // List of connected users
     pub sessions: Mutex<HashMap<String, Vec<Addr<ChatSession>>>>, // Map of channel to sessions
 }
 
@@ -99,17 +99,20 @@ impl ChatSession {
     // }
 
     fn broadcast_message(&self, message: &str, _ctx: &mut ws::WebsocketContext<Self>) {
-        let msg = format!("{}: {}", self.user_name, message);
-    
+        let msg = format!("{}: {}", self.user_name.trim(), message.trim());
+        
         // Get sessions for the current channel
         if let Ok(sessions_map) = self.state.sessions.lock() {
             if let Some(sessions) = sessions_map.get(&self.channel_name) {
                 for session in sessions {
                     session.do_send(ChatMessage { msg: msg.clone() });
+
+                    println!("Broadcasting message: {}", msg);
                 }
             }
         }
     }
+    
     
     
 }
@@ -167,10 +170,10 @@ impl Actor for ChatSession {
         self.broadcast_message(&join_message, ctx);
     }
     
-    fn stopped(&mut self, _ctx: &mut Self::Context) {
+    fn stopped(&mut self, ctx: &mut Self::Context) {
         if let Ok(mut sessions_map) = self.state.sessions.lock() {
             if let Some(sessions) = sessions_map.get_mut(&self.channel_name) {
-                sessions.retain(|addr| addr != &_ctx.address());
+                sessions.retain(|addr| addr != &ctx.address());
                 if sessions.is_empty() {
                     sessions_map.remove(&self.channel_name);
                 }
@@ -178,7 +181,7 @@ impl Actor for ChatSession {
         }
     
         let quit_message = format!("{} left the chat", self.user_name);
-        self.broadcast_message(&quit_message, _ctx);
+        self.broadcast_message(&quit_message, ctx);
     }
     
 }

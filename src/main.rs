@@ -73,7 +73,7 @@ async fn main() -> std::io::Result<()> {
     // }));
     let chat_state = web::Data::new(Arc::new(ChatState {
         messages: Mutex::new(Vec::new()),
-        connected_users: Mutex::new(Vec::new()),
+        // connected_users: Mutex::new(Vec::new()),
         sessions: Mutex::new(HashMap::new()),
     }));
     

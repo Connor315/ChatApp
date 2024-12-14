@@ -517,6 +517,7 @@ fn setup_websocket(
             // Only clone messages once for the message handler
             let messages_handler = messages.clone();
             let onmessage = Closure::wrap(Box::new(move |event: MessageEvent| {
+                gloo::console::log!("onmessage triggered");
                 if let Some(text) = event.data().as_string() {
                     if text == "ping" {
                         return;
@@ -524,8 +525,12 @@ fn setup_websocket(
 
                     let mut current_messages = (*messages_handler).clone();
                     gloo::console::log!("Current messages before update:", current_messages.len());
+
+                    gloo::console::log!("Received message (raw):", &text);
+
                     
-                    let new_message = if text.contains(" joined the chat") {
+                    let new_message = if text.trim().contains(" left the chat") || text.trim().contains(" joined the chat"){
+                        
                         ChatMessage {
                             username: "System".to_string(),
                             message: text,
@@ -544,7 +549,7 @@ fn setup_websocket(
                     } else {
                         return;
                     };
-
+                    
                     gloo::console::log!("set up 1");
                     current_messages.push(new_message);
                     // gloo::console::log!("Messages after update:", current_messages.len());
@@ -553,6 +558,8 @@ fn setup_websocket(
             }) as Box<dyn FnMut(MessageEvent)>);
             websocket.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
             onmessage.forget();
+
+            
 
             Some(websocket)
         }
@@ -564,7 +571,7 @@ fn setup_websocket(
 }
 
 fn set_onmessage(messages: UseStateHandle<Vec<ChatMessage>>, ws_state: UseStateHandle<Option<WebSocket>>) -> Option<Closure<dyn FnMut(MessageEvent)>> {
-    if let Some(ws) = &*ws_state {
+    if let Some(_ws) = &*ws_state {
         let messages_handler = messages.clone();
         let onmessage = Closure::wrap(Box::new(move |event: MessageEvent| {
             if let Some(text) = event.data().as_string() {
@@ -575,7 +582,7 @@ fn set_onmessage(messages: UseStateHandle<Vec<ChatMessage>>, ws_state: UseStateH
                 let mut current_messages = (*messages_handler).clone();
                 gloo::console::log!("Current messages before update:", current_messages.len());
                 
-                let new_message = if text.contains(" joined the chat") {
+                let new_message = if text.contains(" joined the chat") || text.contains(" left the chat"){
                     ChatMessage {
                         username: "System".to_string(),
                         message: text,
