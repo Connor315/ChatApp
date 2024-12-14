@@ -559,8 +559,6 @@ fn setup_websocket(
             websocket.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
             onmessage.forget();
 
-            
-
             Some(websocket)
         }
         Err(err) => {
@@ -570,48 +568,44 @@ fn setup_websocket(
     }
 }
 
-fn set_onmessage(messages: UseStateHandle<Vec<ChatMessage>>, ws_state: UseStateHandle<Option<WebSocket>>) -> Option<Closure<dyn FnMut(MessageEvent)>> {
-    if let Some(_ws) = &*ws_state {
-        let messages_handler = messages.clone();
-        let onmessage = Closure::wrap(Box::new(move |event: MessageEvent| {
-            if let Some(text) = event.data().as_string() {
-                if text == "ping" {
-                    return;
-                }
-
-                let mut current_messages = (*messages_handler).clone();
-                gloo::console::log!("Current messages before update:", current_messages.len());
-                
-                let new_message = if text.contains(" joined the chat") || text.contains(" left the chat"){
-                    ChatMessage {
-                        username: "System".to_string(),
-                        message: text,
-                        timestamp: chrono::Local::now()
-                            .format("%Y-%m-%d %H:%M")
-                            .to_string(),
-                    }
-                } else if let Some((username, msg)) = text.split_once(':') {
-                    ChatMessage {
-                        username: username.to_string(),
-                        message: msg.trim().to_string(),
-                        timestamp: chrono::Local::now()
-                            .format("%Y-%m-%d %H:%M:%S%.3f")
-                            .to_string(),
-                    }
-                } else {
-                    return;
-                };
-
-                gloo::console::log!("Adding new message");
-                current_messages.push(new_message);
-                gloo::console::log!("Messages after update:", current_messages.len());
-                messages_handler.set(current_messages);
+fn set_onmessage(messages: UseStateHandle<Vec<ChatMessage>>) -> Option<Closure<dyn FnMut(MessageEvent)>> {
+    let messages_handler = messages.clone();
+    let onmessage = Closure::wrap(Box::new(move |event: MessageEvent| {
+        if let Some(text) = event.data().as_string() {
+            if text == "ping" {
+                return;
             }
-        }) as Box<dyn FnMut(MessageEvent)>);
-        Some(onmessage)
-    } else {
-        None
-    }
+
+            let mut current_messages = (*messages_handler).clone();
+            gloo::console::log!("Current messages before update:", current_messages.len());
+            
+            let new_message = if text.contains(" joined the chat") || text.contains(" left the chat"){
+                ChatMessage {
+                    username: "System".to_string(),
+                    message: text,
+                    timestamp: chrono::Local::now()
+                        .format("%Y-%m-%d %H:%M")
+                        .to_string(),
+                }
+            } else if let Some((username, msg)) = text.split_once(':') {
+                ChatMessage {
+                    username: username.to_string(),
+                    message: msg.trim().to_string(),
+                    timestamp: chrono::Local::now()
+                        .format("%Y-%m-%d %H:%M:%S%.3f")
+                        .to_string(),
+                }
+            } else {
+                return;
+            };
+
+            gloo::console::log!("Adding new message");
+            current_messages.push(new_message);
+            gloo::console::log!("Messages after update:", current_messages.len());
+            messages_handler.set(current_messages);
+        }
+    }) as Box<dyn FnMut(MessageEvent)>);
+    Some(onmessage)
 }
 
 
@@ -774,7 +768,7 @@ fn chat_room() -> Html {
         use_effect_with_deps(
             move |_| {
                 if *ws_setup_clone {
-                    if let Some(ws_onmessage) = set_onmessage(messages_c1.clone(), ws_clone.clone()) {
+                    if let Some(ws_onmessage) = set_onmessage(messages_c1.clone()) {
                         if let Some(webs) = &*ws_clone {
                             webs.set_onmessage(Some(ws_onmessage.as_ref().unchecked_ref()));
                             ws_onmessage.forget();
