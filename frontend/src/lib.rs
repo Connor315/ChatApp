@@ -33,10 +33,11 @@ struct MessageRequest {
     content: String,
 }
 
-#[derive(Deserialize, Clone, Debug, PartialEq)]
-struct User {
-    username: String,
-    online: bool,
+#[derive(Serialize, Deserialize, Clone)]
+pub struct UserStatus {
+    pub username: String,
+    pub status: String,
+    pub timestamp: String,
 }
 
 #[function_component(Welcome)]
@@ -614,7 +615,6 @@ fn set_onmessage(messages: UseStateHandle<Vec<ChatMessage>>) -> Option<Closure<d
     Some(onmessage)
 }
 
-
 #[function_component(ChatRoom)]
 fn chat_room() -> Html {
     let error = use_state(|| String::new());
@@ -624,47 +624,9 @@ fn chat_room() -> Html {
     let messages = use_state(|| Vec::<ChatMessage>::new());
     let history_fetch = use_state(|| false);
     let ws_setup = use_state(|| false);
-    let users = use_state(|| Vec::<User>::new());
+    let user_statuses = use_state(|| Vec::<UserStatus>::new());
 
-    {
-        let users = users.clone();
-        let error = error.clone();
-        let channel_state = current_channel.clone();
-
-        use_effect_with_deps(
-            move |_| {
-                if let Some(channel) = (*channel_state).clone() {
-                    spawn_local(async move {
-                        let response = Request::get(&format!("http://localhost:8080/channel/users/{}", channel.name))
-                            .send()
-                            .await;
-
-                        match response {
-                            Ok(resp) if resp.status() == 200 => {
-                                match resp.json::<Vec<User>>().await {
-                                    Ok(user_list) => {
-                                        users.set(user_list);
-                                    }
-                                    Err(e) => {
-                                        error.set(format!("Failed to parse user list: {}", e));
-                                    }
-                                }
-                            },
-                            Ok(_) => {
-                                error.set("Failed to fetch user list".to_string());
-                            }
-                            Err(e) => {
-                                error.set(format!("Network error: {}", e));
-                            }
-                        }
-                    });
-                }
-                || ()
-            },
-            current_channel.clone(),
-        );
-    }
-
+    // Initial channel setup
     {
         let current_channel = current_channel.clone();
         let error = error.clone();
@@ -709,38 +671,54 @@ fn chat_room() -> Html {
                         error.set("No channel selected".to_string());
                     }
                 });
-
                 || ()
             },
             (),
         );
     }
 
+    // Fetch chat history
     {
         let history_fetch = history_fetch.clone();
         let messages = messages.clone();
         let error = error.clone();
         let channel_state = current_channel.clone();
 
+        // In the history fetch effect
         use_effect_with_deps(
             move |_| {
                 if let Some(channel) = (*channel_state).clone() {
                     spawn_local(async move {
+                        gloo::console::log!("=== FETCHING CHAT HISTORY ===");
+                        gloo::console::log!("Channel name:", &channel.name);
+                        
                         let response = Request::get(&format!("http://localhost:8080/channel/history/{}", channel.name))
                             .send()
                             .await;
 
                         match response {
-                            Ok(resp) => match resp.json::<Vec<ChatMessage>>().await {
-                                Ok(history) => {
-                                    messages.set(history);
-                                    history_fetch.set(true);
+                            Ok(resp) => {
+                                gloo::console::log!("Response status:", resp.status());
+                                match resp.json::<Vec<ChatMessage>>().await {
+                                    Ok(history) => {
+                                        gloo::console::log!("Raw history count:", history.len());
+                                        for msg in &history {
+                                            gloo::console::log!("History message:", 
+                                                format!("User: {}, Content: {}", msg.username, msg.message));
+                                        }
+                                        
+                                        messages.set(history);
+                                        history_fetch.set(true);
+                                        gloo::console::log!("History set complete");
+                                    }
+                                    Err(e) => {
+                                        gloo::console::log!("Failed to parse history:", e.to_string());
+                                        error.set(format!("Failed to parse history: {}", e));
+                                    }
                                 }
-                                Err(e) => {
-                                    error.set(format!("Failed to parse history: {}", e));
-                                }
-                            },
+                            }
                             Err(e) => {
+                                gloo::console::log!("Failed to fetch history:", e.to_string());
                                 error.set(format!("Failed to fetch history: {}", e));
                             }
                         }
@@ -752,73 +730,20 @@ fn chat_room() -> Html {
         );
     }
 
-    let handle_ws_message = {
-        let messages = messages.clone();
-        let users = users.clone();
-        
-        move |text: String| {
-            if text == "ping" {
-                return;
-            }
-
-            if text.starts_with("USERS:") {
-                if let Ok(user_list) = serde_json::from_str::<Vec<User>>(&text[6..]) {
-                    users.set(user_list);
-                    return;
-                }
-            }
-
-            let mut current_messages = (*messages).clone();
-            let new_message = if text.contains(" joined the chat") || text.contains(" left the chat") {
-                ChatMessage {
-                    username: "System".to_string(),
-                    message: text,
-                    timestamp: chrono::Local::now()
-                        .format("%Y-%m-%d %H:%M")
-                        .to_string(),
-                }
-            } else if let Some((username, msg)) = text.split_once(':') {
-                ChatMessage {
-                    username: username.to_string(),
-                    message: msg.trim().to_string(),
-                    timestamp: chrono::Local::now()
-                        .format("%Y-%m-%d %H:%M:%S")
-                        .to_string(),
-                }
-            } else {
-                return;
-            };
-
-            current_messages.push(new_message);
-            messages.set(current_messages);
-        }
-    };
-
+    // WebSocket setup
     {
         let messages_c1 = messages.clone();
         let history_fetch_clone = history_fetch.clone();
         let ws = ws.clone();
         let channel_state = current_channel.clone();
         let ws_setup_clone = ws_setup.clone();
-        let handle_ws_message = handle_ws_message.clone();
 
         use_effect_with_deps(
             move |_| {
                 if *history_fetch_clone {
                     if let Some(channel) = (*channel_state).clone() {
-                        if let Ok(websocket) = WebSocket::new(&format!(
-                            "ws://localhost:8080/channel/ws/{}", 
-                            channel.name
-                        )) {
-                            let onmessage = Closure::wrap(Box::new(move |event: MessageEvent| {
-                                if let Some(text) = event.data().as_string() {
-                                    handle_ws_message(text);
-                                }
-                            }) as Box<dyn FnMut(MessageEvent)>);
-
-                            websocket.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
-                            onmessage.forget();
-
+                        if let Some(websocket) = setup_websocket(channel.name, messages_c1.clone(), ws.clone()) {
+                            // Setup ping
                             let ws_clone = websocket.clone();
                             ws_setup_clone.set(true);
                             spawn_local(async move {
@@ -834,20 +759,81 @@ fn chat_room() -> Html {
                         }
                     }
                 }
+                
                 || ()
             },
             (current_channel.clone(), history_fetch.clone()),
         );
     }
 
+    {
+        let messages_c1 = messages.clone();
+        let ws_setup_clone = ws_setup.clone();
+        let ws_clone = ws.clone();
+
+        use_effect_with_deps(
+            move |_| {
+                if *ws_setup_clone {
+                    if let Some(ws_onmessage) = set_onmessage(messages_c1.clone()) {
+                        if let Some(webs) = &*ws_clone {
+                            webs.set_onmessage(Some(ws_onmessage.as_ref().unchecked_ref()));
+                            ws_onmessage.forget();
+                        }
+                    }
+                }
+                || ()
+            },
+            (ws_setup.clone(), messages.clone()), // Dependencies
+        );
+    }
+
+    {
+        let user_statuses = user_statuses.clone();
+        let channel_state = current_channel.clone();
+
+        use_effect_with_deps(
+            move |_| {
+                if let Some(channel) = (*channel_state).clone() {
+                    let channel_name = channel.name.clone();
+
+                    spawn_local(async move {
+                        loop {
+                            let user_statuses = user_statuses.clone();
+                            let url = format!("http://localhost:8080/user/status/{}", channel_name);
+
+                            match Request::get(&url).send().await {
+                                Ok(response) => {
+                                    if let Ok(status_list) = response.json::<Vec<UserStatus>>().await {
+                                        user_statuses.set(status_list);
+                                    } else {
+                                        gloo::console::log!("Failed to parse user statuses");
+                                    }
+                                }
+                                Err(_) => {
+                                    gloo::console::log!("Failed to fetch user statuses");
+                                }
+                            }
+
+                            TimeoutFuture::new(5_000).await;
+                        }
+                    });
+                }
+
+                || {}
+            },
+            current_channel.clone(),
+        );
+    }
+
+    // Message sending
     let send_message = {
         let message = message.clone();
         let ws = ws.clone();
-
         move || {
             let msg = (*message).clone();
             if !msg.is_empty() {
                 if let Some(websocket) = &*ws {
+                    gloo::console::log!("Sending message:", &msg);
                     if websocket.send_with_str(&msg).is_ok() {
                         message.set(String::new());
                     }
@@ -880,101 +866,17 @@ fn chat_room() -> Html {
         Callback::from(move |_| send_message())
     };
 
-    let on_exit = {
-        let current_channel = current_channel.clone();
-        let history_fetch = history_fetch.clone();
-        
-        Callback::from(move |_| {
-            current_channel.set(None);
-            history_fetch.set(false);
-            match LocalStorage::set("selected_channel", "") {
-                Ok(_) => gloo::console::log!("Channel cleared"),
-                Err(_) => gloo::console::log!("Error clearing channel"),
-            }
-            window().location().set_href("/channel_list").unwrap();
-        })
-    };
+    let cur_channel = current_channel.clone();
 
-    let handle_ws_message = {
-        let messages = messages.clone();
-        let users = users.clone();
-        
-        move |text: String| {
-            if text == "ping" {
-                return;
-            }
-    
-            if text.starts_with("USERS:") {
-                if let Ok(user_list) = serde_json::from_str::<Vec<User>>(&text[6..]) {
-                    users.set(user_list);
-                    return;
-                }
-            }
-    
-            let mut current_messages = (*messages).clone();
-            let mut current_users = (*users).clone();
-    
-            if text.contains(" joined the chat") {
-                let username = text.split(' ').next().unwrap_or("").to_string();
-                current_messages.push(ChatMessage {
-                    username: "System".to_string(),
-                    message: text.clone(),
-                    timestamp: chrono::Local::now()
-                        .format("%Y-%m-%d %H:%M")
-                        .to_string(),
-                });
-                
-                // Add or update user in the list
-                if !username.is_empty() {
-                    if let Some(user) = current_users.iter_mut().find(|u| u.username == username) {
-                        user.online = true;
-                    } else {
-                        current_users.push(User {
-                            username,
-                            online: true,
-                        });
-                    }
-                    users.set(current_users);
-                }
-            } else if text.contains(" left the chat") {
-                let username = text.split(' ').next().unwrap_or("").to_string();
-                current_messages.push(ChatMessage {
-                    username: "System".to_string(),
-                    message: text.clone(),
-                    timestamp: chrono::Local::now()
-                        .format("%Y-%m-%d %H:%M")
-                        .to_string(),
-                });
-                
-                // Update user status in the list
-                if !username.is_empty() {
-                    if let Some(user) = current_users.iter_mut().find(|u| u.username == username) {
-                        user.online = false;
-                        users.set(current_users);
-                    }
-                }
-            } else if let Some((username, msg)) = text.split_once(':') {
-                current_messages.push(ChatMessage {
-                    username: username.to_string(),
-                    message: msg.trim().to_string(),
-                    timestamp: chrono::Local::now()
-                        .format("%Y-%m-%d %H:%M:%S")
-                        .to_string(),
-                });
-    
-                // Ensure message sender is in user list and online
-                if !current_users.iter().any(|u| u.username == username) {
-                    current_users.push(User {
-                        username: username.to_string(),
-                        online: true,
-                    });
-                    users.set(current_users);
-                }
-            }
-    
-            messages.set(current_messages);
+    let on_exit = Callback::from(move |_| {
+        cur_channel.set(None);
+        history_fetch.set(false);
+        match LocalStorage::set("selected_channel", "") {
+            Ok(_) => gloo::console::log!("Channel clear"),
+            Err(_) => gloo::console::log!("Error"),
         }
-    };
+        window().location().set_href("/channel_list").unwrap();
+    });
 
     match &*current_channel {
         Some(channel) => html! {
@@ -1028,12 +930,12 @@ fn chat_room() -> Html {
                         </div>
                     </div>
                     <div class="user-list">
-                        <h3>{"Users Online"}</h3>
+                        <h3>{"User Status"}</h3>
                         <div class="user-list-content">
-                            {for (*users).iter().map(|user| {
+                            {for (*user_statuses).iter().map(|user| {
                                 html! {
                                     <div class="user-item">
-                                        <span class={classes!("status-indicator", if user.online { "online" } else { "offline" })}></span>
+                                        <span class={classes!("status-indicator", if user.status=="Online" { "online" } else { "offline" })}></span>
                                         <span class="username">{&user.username}</span>
                                     </div>
                                 }

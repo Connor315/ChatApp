@@ -9,6 +9,7 @@ use crate::Sqlite;
 use crate::Pool;
 use crate::user;
 use crate::database::append_chat_message_sled;
+use crate::database::append_user_status_sled;
 use std::collections::HashMap;
 
 #[derive(Message)]
@@ -167,6 +168,14 @@ impl Actor for ChatSession {
         }
     
         let join_message = format!("{} joined the chat", self.user_name);
+        if let Err(err) = append_user_status_sled(
+            &self.sled_db,
+            &self.channel_name, 
+            &self.user_name,
+            true
+        ) {
+            println!("Failed to store user status in Sled: {}", err);
+        }
         self.broadcast_message(&join_message, ctx);
     }
     
@@ -181,6 +190,14 @@ impl Actor for ChatSession {
         }
     
         let quit_message = format!("{} left the chat", self.user_name);
+        if let Err(err) = append_user_status_sled(
+            &self.sled_db,
+            &self.channel_name, 
+            &self.user_name,
+            false
+        ) {
+            println!("Failed to store user status in Sled: {}", err);
+        }
         self.broadcast_message(&quit_message, ctx);
     }
     
@@ -213,7 +230,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for ChatSession {
                     &self.user_name,
                     &text,
                 ) {
-                    eprintln!("Failed to store chat message in Sled: {}", err);
+                    println!("Failed to store chat message in Sled: {}", err);
                 }
 
                 // Broadcast the message to all clients

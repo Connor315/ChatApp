@@ -15,6 +15,7 @@ use database::init_sled_db;
 use user::register;
 use user::login;
 use user::logout;
+use user::user_status;
 use channel::channel_create;
 use channel::channel_enter;
 // use channel::channel_exit;
@@ -25,12 +26,6 @@ use crate::websocket::ChatState;
 use actix_cors::Cors;
 use actix_web::http::header;
 use std::collections::HashMap;
-// pub async fn auth(session: Session) -> impl Responder {
-//     match check_auth(&session) {
-//         Ok(_) => HttpResponse::Ok().finish(),
-//         Err(err) => HttpResponse::Unauthorized().body(err.to_string()),
-//     }
-// }
 
 async fn login_page() -> impl Responder {
     fs::NamedFile::open("./static/login.html")
@@ -62,6 +57,8 @@ async fn index() -> impl Responder {
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> std::io::Result<()> {
+    // std::env::set_var("RUST_LOG", "debug"); // Set log level to debug
+    // env_logger::init();
     let sqlite_db: Pool<Sqlite> = init_sqlite_db().await;
     // let sled_db: Db = init_sled_db().await;
     let sled_db = web::Data::new(init_sled_db().await);
@@ -114,9 +111,11 @@ async fn main() -> std::io::Result<()> {
             // .route("/channel/enter", web::post().to(channel_enter_page))
             .service(
                 web::scope("/user")
+                    .app_data(sled_db.clone()) 
                     .route("/register", web::post().to(register))
                     .route("/login", web::post().to(login))
                     .route("/logout", web::post().to(logout))
+                    .route("/status/{name}", web::get().to(user_status))
             )
             .service(
                 web::scope("/channel")

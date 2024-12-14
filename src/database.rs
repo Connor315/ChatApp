@@ -4,6 +4,7 @@ use sled::Db;
 use uuid::Uuid;
 
 use crate::channel::ChatMessage;
+use crate::user::UserStatus;
 
 pub fn append_chat_message_sled(sled_db: &Db, channel_name: &str, username: &str, message: &str) -> Result<(), sled::Error> {
     let timestamp = chrono::Local::now()
@@ -20,12 +21,26 @@ pub fn append_chat_message_sled(sled_db: &Db, channel_name: &str, username: &str
     Ok(())
 }
 
-pub fn get_chat_history_sled(
-    sled_db: &Db,
-    channel_name: &str,
-) -> Result<Vec<ChatMessage>, sled::Error> {
-    println!("=== BEGIN CHAT HISTORY FETCH ===");
-    println!("Getting history for channel: {}", channel_name);
+pub fn append_user_status_sled(sled_db: &Db, channel_name: &str, username: &str, online: bool) -> Result<(), sled::Error> {
+    let timestamp = chrono::Local::now()
+        .format("%Y-%m-%d %H:%M:%S%.3f")
+        .to_string();
+    
+    let tree_name = format!("{}_user_status", channel_name);
+    let tree = sled_db.open_tree(&tree_name)?;
+
+    let key = username.to_string();
+    let status = if online { "Online" } else { "Offline" };
+    let value = format!("{}:{}", status, timestamp);
+
+    tree.insert(key.as_bytes(), value.as_bytes())?;
+    tree.flush()?;
+    Ok(())
+}
+
+pub fn get_chat_history_sled(sled_db: &Db, channel_name: &str) -> Result<Vec<ChatMessage>, sled::Error> {
+    // println!("=== BEGIN CHAT HISTORY FETCH ===");
+    // println!("Getting history for channel: {}", channel_name);
     
     let tree = match sled_db.open_tree(channel_name) {
         Ok(t) => t,
@@ -37,13 +52,10 @@ pub fn get_chat_history_sled(
     for item in tree.iter() {
         match item {
             Ok((key, value)) => {
-                if let (Ok(key_str), Ok(value_str)) = (
-                    String::from_utf8(key.to_vec()),
-                    String::from_utf8(value.to_vec())
-                ) {
-                    println!("\nProcessing message:");
-                    println!("Key: {}", key_str);
-                    println!("Value: {}", value_str);
+                if let (Ok(key_str), Ok(value_str)) = (String::from_utf8(key.to_vec()), String::from_utf8(value.to_vec())) {
+                    // println!("\nProcessing message:");
+                    // println!("Key: {}", key_str);
+                    // println!("Value: {}", value_str);
                     
                     // Split the key into timestamp and username
                     // Format is "YYYY-MM-DD HH:MM:username"
@@ -53,10 +65,10 @@ pub fn get_chat_history_sled(
                         // Get message from value
                         // Value format is "username:message"
                         if let Some((username, message)) = value_str.split_once(':') {
-                            println!("✓ Parsed successfully:");
-                            println!("  Timestamp: {}", timestamp);
-                            println!("  Username: {}", username);
-                            println!("  Message: {}", message);
+                            // println!("✓ Parsed successfully:");
+                            // println!("  Timestamp: {}", timestamp);
+                            // println!("  Username: {}", username);
+                            // println!("  Message: {}", message);
                             
                             if message != "ping" {
                                 let chat_message = ChatMessage {
@@ -78,6 +90,27 @@ pub fn get_chat_history_sled(
     Ok(messages)
 }
 
+pub fn get_user_status_sled(sled_db: &Db, channel_name: &str) -> Result<Vec<UserStatus>, sled::Error> {
+    let tree_name = format!("{}_user_status", channel_name);
+    let tree = sled_db.open_tree(&tree_name)?;
+
+    let mut statuses = Vec::new();
+
+    for result in tree.iter() {
+        let (key, value) = result?;
+        if let (Ok(username), Ok(value_str)) = (String::from_utf8(key.to_vec()), String::from_utf8(value.to_vec())) {
+            if let Some((status, timestamp)) = value_str.split_once(':') {
+                statuses.push(UserStatus {
+                    username: username.to_string(),
+                    status: status.to_string(),
+                    timestamp: timestamp.to_string(),
+                });
+            }
+        }
+    }
+
+    Ok(statuses)
+}
 
 pub async fn init_sqlite_db() -> Pool<Sqlite> {
     if !Sqlite::database_exists("sqlite:chat_sqlite.db").await.unwrap_or(false) {
@@ -104,8 +137,7 @@ pub async fn init_sqlite_db() -> Pool<Sqlite> {
         CREATE TABLE IF NOT EXISTS Users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             Username TEXT NOT NULL UNIQUE,
-            Password TEXT NOT NULL,
-            Status TEXT NOT NULL DEFAULT 'offline'
+            Password TEXT NOT NULL
         );
 
         CREATE TABLE IF NOT EXISTS Channel (

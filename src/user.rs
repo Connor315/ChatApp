@@ -1,9 +1,10 @@
 use actix_web::{web, Responder, HttpResponse, Error};
 use sqlx::{Pool, Sqlite};
 use actix_session::Session;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use actix_web::error::ErrorUnauthorized;
 use pwhash::bcrypt;
+use crate::database::get_user_status_sled;
 
 #[derive(Deserialize)]
 pub struct RegisterRequest {
@@ -15,6 +16,18 @@ pub struct RegisterRequest {
 pub struct LoginRequest {
     username: String,
     password: String,
+}
+
+#[derive(Deserialize)]
+pub struct StatusRequest {
+    name: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct UserStatus {
+    pub username: String,
+    pub status: String,
+    pub timestamp: String,
 }
 
 pub fn check_auth(session: &Session) -> Result<(u32, String), Error> {
@@ -85,4 +98,12 @@ pub async fn logout(session: Session) -> impl Responder {
     }
     session.clear();
     HttpResponse::Ok().json("Logout successful")
+}
+
+pub async fn user_status(sled_db: web::Data<sled::Db>, info: web::Path<StatusRequest>) -> impl Responder {
+    let channel_name = &info.name;
+    match get_user_status_sled(&sled_db, channel_name) {
+        Ok(user_statuses) => HttpResponse::Ok().json(user_statuses),
+        Err(e) => HttpResponse::InternalServerError().body(format!("Internal server error: {}", e)),
+    }
 }

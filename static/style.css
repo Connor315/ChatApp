@@ -301,11 +301,8 @@ body {
 
 
 .user-list {
-    width: 200px;
-    border-left: 1px solid #e2e8f0;
-    padding: 1rem;
-    background: #f8f9fa;
-    border-radius: 8px;
+    padding-top: 10px;
+    width: 20%;
 }
 
 .user-list h3 {
@@ -340,14 +337,4 @@ body {
 
 .status-indicator.offline {
     background: #dc3545;
-}
-
-
-.chat-messages {
-    height: auto; 
-    flex-grow: 1;
-    padding: 20px;
-    overflow-y: auto;
-    background: #ffffff;
-    border-radius: 8px;
 }
