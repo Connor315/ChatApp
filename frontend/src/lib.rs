@@ -21,7 +21,7 @@ struct Channel {
     owner: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 struct ChatMessage {
     username: String,
     message: String,
@@ -530,7 +530,7 @@ fn setup_websocket(
                             username: "System".to_string(),
                             message: text,
                             timestamp: chrono::Local::now()
-                                .format("%Y-%m-%d %H:%M:%S%.3f")
+                                .format("%Y-%m-%d %H:%M")
                                 .to_string(),
                         }
                     } else if let Some((username, msg)) = text.split_once(':') {
@@ -545,9 +545,9 @@ fn setup_websocket(
                         return;
                     };
 
-                    gloo::console::log!("Adding new message");
+                    gloo::console::log!("set up 1");
                     current_messages.push(new_message);
-                    gloo::console::log!("Messages after update:", current_messages.len());
+                    // gloo::console::log!("Messages after update:", current_messages.len());
                     messages_handler.set(current_messages);
                 }
             }) as Box<dyn FnMut(MessageEvent)>);
@@ -563,6 +563,50 @@ fn setup_websocket(
     }
 }
 
+fn set_onmessage(messages: UseStateHandle<Vec<ChatMessage>>, ws_state: UseStateHandle<Option<WebSocket>>) -> Option<Closure<dyn FnMut(MessageEvent)>> {
+    if let Some(ws) = &*ws_state {
+        let messages_handler = messages.clone();
+        let onmessage = Closure::wrap(Box::new(move |event: MessageEvent| {
+            if let Some(text) = event.data().as_string() {
+                if text == "ping" {
+                    return;
+                }
+
+                let mut current_messages = (*messages_handler).clone();
+                gloo::console::log!("Current messages before update:", current_messages.len());
+                
+                let new_message = if text.contains(" joined the chat") {
+                    ChatMessage {
+                        username: "System".to_string(),
+                        message: text,
+                        timestamp: chrono::Local::now()
+                            .format("%Y-%m-%d %H:%M")
+                            .to_string(),
+                    }
+                } else if let Some((username, msg)) = text.split_once(':') {
+                    ChatMessage {
+                        username: username.to_string(),
+                        message: msg.trim().to_string(),
+                        timestamp: chrono::Local::now()
+                            .format("%Y-%m-%d %H:%M:%S%.3f")
+                            .to_string(),
+                    }
+                } else {
+                    return;
+                };
+
+                gloo::console::log!("Adding new message");
+                current_messages.push(new_message);
+                gloo::console::log!("Messages after update:", current_messages.len());
+                messages_handler.set(current_messages);
+            }
+        }) as Box<dyn FnMut(MessageEvent)>);
+        Some(onmessage)
+    } else {
+        None
+    }
+}
+
 
 #[function_component(ChatRoom)]
 fn chat_room() -> Html {
@@ -572,6 +616,7 @@ fn chat_room() -> Html {
     let ws = use_state(|| None::<WebSocket>);
     let messages = use_state(|| Vec::<ChatMessage>::new());  // Chat history
     let history_fetch = use_state(|| false);
+    let ws_setup = use_state(|| false);
 
     // Initial channel setup
     {
@@ -684,6 +729,7 @@ fn chat_room() -> Html {
         let history_fetch_clone = history_fetch.clone();
         let ws = ws.clone();
         let channel_state = current_channel.clone();
+        let ws_setup_clone = ws_setup.clone();
 
         use_effect_with_deps(
             move |_| {
@@ -692,6 +738,7 @@ fn chat_room() -> Html {
                         if let Some(websocket) = setup_websocket(channel.name, messages_c1.clone(), ws.clone()) {
                             // Setup ping
                             let ws_clone = websocket.clone();
+                            ws_setup_clone.set(true);
                             spawn_local(async move {
                                 loop {
                                     TimeoutFuture::new(30_000).await;
@@ -711,6 +758,28 @@ fn chat_room() -> Html {
             (current_channel.clone(), history_fetch.clone()),
         );
     }
+
+    {
+        let messages_c1 = messages.clone();
+        let ws_setup_clone = ws_setup.clone();
+        let ws_clone = ws.clone(); // Use a different variable name to avoid conflict
+
+        use_effect_with_deps(
+            move |_| {
+                if *ws_setup_clone {
+                    if let Some(ws_onmessage) = set_onmessage(messages_c1.clone(), ws_clone.clone()) {
+                        if let Some(webs) = &*ws_clone {
+                            webs.set_onmessage(Some(ws_onmessage.as_ref().unchecked_ref()));
+                            ws_onmessage.forget();
+                        }
+                    }
+                }
+                || ()
+            },
+            (ws_setup.clone(), messages.clone()), // Dependencies
+        );
+    }
+
 
     // Message sending
     let send_message = {
