@@ -16,6 +16,16 @@ Our goal was to create an application that would run quickly in highly simultane
 <!-- Objectives: What are the objectives of this project? -->
 
 ### Objective
+The main goals of our live chat app are to make it better and solve common problems with online communication tools. We want to work hard on research and development. This will help the app meet modern user needs. The project also aims to create special features and strong performance. Our goal is for the app to stand out in the market.
+
+First of all, a key aim of this project is to offer users quick and smooth communication that feels instantaneous. To achieve this, server load is managed efficiently, and network protocols are optimized. Real-time applications like ours depend on WebSockets for quick communication and asynchronous operations for handling tasks without waiting. The Yew framework helps maintain the app's state effectively, ensuring smooth functionality. By using WebAssembly for rendering on the client side, server pressure is lowered, and response time is faster. Stability is improved through reliable error handling and automatic reconnections, so users stay connected even during temporary issues. These features combine to provide a responsive and reliable chatting experience online.
+
+Our goal is to build a backend that stays fast as more users join. We plan to use SQLite for user login and sled for saving chat messages, with the option to switch to larger cloud databases later if needed. We focus on managing data well by using resources wisely, even though advanced features like load balancing and data partitioning are not included yet. This chat app is made to support many users at the same time. It uses async programming to handle requests quickly and WebSockets to keep real-time chats open with little delay. On the client side, WebAssembly helps by taking some tasks off the server, reducing its workload and making the app faster to respond. The app manages resources carefully to avoid wasting effort, ensuring it works well even with more traffic. Strong error handling and automatic reconnections keep the app stable, so users stay connected during short interruptions. These features support growth, but more upgrades might be needed if the app must handle a much larger user group.
+
+Besides, it boost much users like using our product by making the interface simple to use. It should be neat, without too much going on, and focus on making things easy for users with clear signs for where to click and smooth changes between screens. The live chat app has a user-friendly interface that makes it simple and clear for users to interact. It uses the Yew framework to keep the interface organized and predictable, with every part easy to handle. Navigation is straightforward, featuring clearly marked buttons and obvious cues for interactions. It also includes helpful error messages that inform users about what's happening with their actions. The consistent look of buttons and input fields throughout the app helps users feel comfortable and familiar quickly. Altogether, these design choices create a straightforward user environment that helps all users, no matter their tech skill level, to get used to and use the app effectively.
+
+Use Rust’s speed and memory safety to build a strong and fast chat app. This real-time chat app uses Rust’s best features to make a stable and responsive platform. By following Rust’s ownership and borrowing rules, the app avoids memory problems during concurrent tasks, stopping issues like data races. Async programming in Rust makes it faster, letting the app handle network requests and I/O tasks without slowing down the interface. Serde helps by quickly and safely converting chat messages for network use, which improves communication efficiency. Compiling Rust into WebAssembly allows fast client-side processing, cutting server work and making the app more responsive. On the backend, Rust manages WebSocket connections, keeping chats smooth and fast for frequent message exchanges. Rust’s strong type system and memory control ensure the app stays stable and reliable.
+
 
 
 <!-- Features: What are the main features offered by the final project deliverable? -->
@@ -105,7 +115,10 @@ Please follow these steps to set up and run the project:
 
 **Yalin Tuo:**
 
-- TODO
+- Implemented frontend login and registration
+- Implemented channel list and chat room page design
+- Implemented channel selection
+- Implemented user logout
 
 <!-- Lessons learned and concluding remarks: Write about any lessons the team has learned throughout the project and concluding remarks, if any. -->
 
