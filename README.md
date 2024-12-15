@@ -23,6 +23,8 @@ Our goal was to create an application that would run quickly in highly simultane
 For easy-to-use and user-friendly, we choose to use Sqlite by using sqlx and one nosql database using sled crate rather than using Postgresql which requires external dependencies, as you will see in the user's guide and Reproducibility guide, our setup procedures is super simple and easy to use and understand.
 User authentications such as ... is considered lower volumn compared to storing chat messages persistently in real life and existing productions, since ...so that we can use sqlite database with relational sql for data integrity and minimize errors, and use nosql database for chat messages to optimize read and write performance since messaging is priorities in our application with high volumn requests where we want to store the chat messages persistently as well.
 
+Our real-time communication part implemented using websocket which supports  full-duplex communication, meaning the server and client can send and receive messages simultaneously over a single but persistent connection. Since the WebSocket connection remains open for as long as needed, there's no need to repeatedly establish connections like in HTTP. This reduces latency significantly, making it ideal for real-time applications. Also, webSockets allow servers to push data updates to users, reducing the need for users to poll the database frequently. This reduces the number of redundant database queries and lightens the load on the database.
+
 <!-- User’s (or Developer’s) Guide: How does a user — or developer, if the project is a crate — use each of the main features in the project deliverable? -->
 ### User’s Guide
 
@@ -102,6 +104,7 @@ Please follow these steps to set up and run the project:
 - Implemented frontend-backend integration
 
 **Yalin Tuo:**
+
 - TODO
 
 <!-- Lessons learned and concluding remarks: Write about any lessons the team has learned throughout the project and concluding remarks, if any. -->
