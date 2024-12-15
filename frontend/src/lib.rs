@@ -557,7 +557,7 @@ fn setup_websocket(
                         return;
                     };
                     
-                    gloo::console::log!("set up 1");
+                    // gloo::console::log!("set up 1");
                     current_messages.push(new_message);
                     // gloo::console::log!("Messages after update:", current_messages.len());
                     messages_handler.set(current_messages);
@@ -584,7 +584,7 @@ fn set_onmessage(messages: UseStateHandle<Vec<ChatMessage>>) -> Option<Closure<d
             }
 
             let mut current_messages = (*messages_handler).clone();
-            gloo::console::log!("Current messages before update:", current_messages.len());
+            // gloo::console::log!("Current messages before update:", current_messages.len());
             
             let new_message = if text.contains(" joined the chat") || text.contains(" left the chat"){
                 ChatMessage {
@@ -606,9 +606,9 @@ fn set_onmessage(messages: UseStateHandle<Vec<ChatMessage>>) -> Option<Closure<d
                 return;
             };
 
-            gloo::console::log!("Adding new message");
+            // gloo::console::log!("Adding new message");
             current_messages.push(new_message);
-            gloo::console::log!("Messages after update:", current_messages.len());
+            // gloo::console::log!("Messages after update:", current_messages.len());
             messages_handler.set(current_messages);
         }
     }) as Box<dyn FnMut(MessageEvent)>);
@@ -689,8 +689,8 @@ fn chat_room() -> Html {
             move |_| {
                 if let Some(channel) = (*channel_state).clone() {
                     spawn_local(async move {
-                        gloo::console::log!("=== FETCHING CHAT HISTORY ===");
-                        gloo::console::log!("Channel name:", &channel.name);
+                        // gloo::console::log!("=== FETCHING CHAT HISTORY ===");
+                        // gloo::console::log!("Channel name:", &channel.name);
                         
                         let response = Request::get(&format!("http://localhost:8080/channel/history/{}", channel.name))
                             .send()
@@ -698,15 +698,14 @@ fn chat_room() -> Html {
 
                         match response {
                             Ok(resp) => {
-                                gloo::console::log!("Response status:", resp.status());
+                                // gloo::console::log!("Response status:", resp.status());
                                 match resp.json::<Vec<ChatMessage>>().await {
                                     Ok(history) => {
-                                        gloo::console::log!("Raw history count:", history.len());
-                                        for msg in &history {
-                                            gloo::console::log!("History message:", 
-                                                format!("User: {}, Content: {}", msg.username, msg.message));
-                                        }
-                                        
+                                        // gloo::console::log!("Raw history count:", history.len());
+                                        // for msg in &history {
+                                        //     gloo::console::log!("History message:", 
+                                        //         format!("User: {}, Content: {}", msg.username, msg.message));
+                                        // }
                                         messages.set(history);
                                         history_fetch.set(true);
                                         gloo::console::log!("History set complete");
@@ -833,7 +832,7 @@ fn chat_room() -> Html {
             let msg = (*message).clone();
             if !msg.is_empty() {
                 if let Some(websocket) = &*ws {
-                    gloo::console::log!("Sending message:", &msg);
+                    // gloo::console::log!("Sending message:", &msg);
                     if websocket.send_with_str(&msg).is_ok() {
                         message.set(String::new());
                     }

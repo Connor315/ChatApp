@@ -134,7 +134,6 @@ async fn main() -> std::io::Result<()> {
     })
     .bind("127.0.0.1:8080")?;
 
-
-    println!("The server is currently listening on localhost:8080.");
+    println!("Our application server is now running and listening on localhost:8080.");
     server.run().await
 }

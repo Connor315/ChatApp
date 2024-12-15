@@ -145,18 +145,17 @@ pub async fn channel_history(
     sled_db: web::Data<sled::Db>,
     info: web::Path<ChannelPath>,
 ) -> impl Responder {
-    println!("Accessing channel history for: {}", info.name);
-    
+    // println!("Accessing channel history for: {}", info.name);
     let channel_name = &info.name;
     
     match get_chat_history_sled(&sled_db, channel_name) {
         Ok(messages) => {
-            println!("Found {} messages", messages.len());
-            // Print each message individually
-            for msg in &messages {
-                println!("Message - User: {}, Content: {}, Time: {}", 
-                    msg.username, msg.message, msg.timestamp);
-            }
+            // println!("Found {} messages", messages.len());
+            // // Print each message individually
+            // for msg in &messages {
+            //     println!("Message - User: {}, Content: {}, Time: {}", 
+            //         msg.username, msg.message, msg.timestamp);
+            // }
             HttpResponse::Ok().json(messages)
         },
         Err(err) => {

@@ -107,8 +107,7 @@ impl ChatSession {
             if let Some(sessions) = sessions_map.get(&self.channel_name) {
                 for session in sessions {
                     session.do_send(ChatMessage { msg: msg.clone() });
-
-                    println!("Broadcasting message: {}", msg);
+                    // println!("Broadcasting message: {}", msg);
                 }
             }
         }
@@ -258,8 +257,7 @@ pub async fn chat_route(
     sled_db: web::Data<sled::Db>,
     channel_name: web::Path<String>,
 ) -> Result<HttpResponse, Error> {
-    println!("WebSocket connection attempt for channel: {}", channel_name);
-    
+    // println!("WebSocket connection attempt for channel: {}", channel_name);
     // Get session from request
     let session = req.get_session();
     
@@ -305,7 +303,6 @@ pub async fn chat_route(
         &req,
         stream,
     )?;
-
-    println!("WebSocket connection established");
+    // println!("WebSocket connection established");
     Ok(resp)
 }
