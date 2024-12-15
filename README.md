@@ -26,8 +26,38 @@ User authentications such as ... is considered lower volumn compared to storing 
 <!-- User’s (or Developer’s) Guide: How does a user — or developer, if the project is a crate — use each of the main features in the project deliverable? -->
 ### User’s Guide
 
+Since it is a real-time chat application, a user is able to talk to other users by joining a chat room just like every other normal online chat application following the instructions below:
+
+1. Log in or register:
+
+   > Users need to either log in or register using their self-created credentials (username and password). We don't have any limitations on the format or length of them since our main goal is on the chatting portion.
+
+2. Create or enter a channel:
+
+   > The "channel" here represents a chat room where you can see other users' status and chat with them. 
+   >
+   > Clicking on the "create a channel" button and inputting a unique "channel name" helps you successfully create a channel owned by yourself. You can also check the "available channel list" to avoid duplicate channel names.
+   >
+   > After successfully creating a channel, you will be navigated back to the channel list page where you can simply choose a channel and click the "enter channel" button to enter the room.
+
+3.  Chat with other users:
+
+   > After entering the chat room, you can see all the history messages sent in the channel before, along with the sent user and time. 
+   >
+   > A broadcast message like "*Username: Username joined the chat*" along with the time will be shown in the middle of the screen so everyone in the channel will find you joining.
+   >
+   > Every time you input some message and press "send", a new message along with your username and current time will be added to the chat history and every other users in this channel will be able to see it.
+
+4. User status (green: online, red: offline):
+
+   > On the right hand side you can see a user status panel where green means the user is currently online and red means the user has entered this channel before but left the channel right now.
+
+5. Multiple users chat:
+
+   > Multiple users can join the same channel and chat with each other if you open the same server twice. Simply logging in using two different credentials and joining the same channel, you can enjoy our real-time chat service.
 
 <!-- Reproducibility Guide: What are the commands needed to set up the runtime environment, if any, and to build the project, so that its features can be used by a user or a developer? Note: The instructor will follow the steps you have included in this section, step-by-step, with no deviation. The instructor has access to a Ubuntu Linux server and a macOS Sonoma laptop computer. -->
+
 ### Reproducibility Guide
 Please follow these steps to set up and run the project:
 
@@ -60,7 +90,10 @@ Please follow these steps to set up and run the project:
 ### Contributions
 
 **Chen Wang:**
-- TODO
+- Implemented real-time communication using websocket
+- Implemented frontend-backend integration of real-time communication
+- Implemented channel enter
+- Implemented channel history
 
 **Kangzhi Gao:**
 - Implemented database and user authentication
