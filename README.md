@@ -6,9 +6,7 @@
 - Yalin Tuo (tuoyalin | 1006033196 | yalin.tuo@mail.utoronto.ca)
 
 <!-- Motivation: What motivated your team to spend time on this project? An excellent project idea is satisfying and fun to work on, and fills a gap that may not be easily found in the Rust ecosystem. -->
-
 ## Motivation
-
 Our team wanted to build this real-time chat application because we found severe problems with many existing chat platforms. These platforms offer a lot of functionality, but they tend to suffer from performance degradation when the number of users is high, resulting in slower messaging and impacting the user experience. In addition, the interface design of these platforms, while fully functional, is overly complex, making it potentially confusing and costly for new users to learn when using them for the first time. In contrast, our application is designed to be lightweight and easy to use, focusing on core features such as real-time messaging, easy-to-manage chat rooms, and clear online status displays. By keeping the interface simple and straightforward, we wanted to improve the user experience, reduce unnecessary complexity, and make the application easier to use and more efficient.
 
 Our goal was to create an application that would run quickly in highly simultaneously situations, ensuring a smooth flow even when a large number of users are online at the same time. This design approach not only allowed us to address new technical challenges, but also provided the team with opportunities to innovate and improve. The team's extensive experience in user login and interface design gave us the confidence to build an application that was both secure and easy to use. In addition, we chose to develop in Rust, a language popular for its high performance and efficient resource management, but uncommon for real-time chat applications. The use of Rust allowed our project to provide a simple, efficient, and powerful alternative to complex applications. Our goal was to create a clean and robust solution focused on solving the performance and usability issues of current chat applications, ultimately providing users with a communication tool that is both powerful and easy to use.
@@ -55,13 +53,14 @@ Our application includes a presence detection feature to track user statuses in 
 ### User Interface
 Our application includes a lightweight Rust-based project folder dedicated to a user-friendly interface, developed using the Yew framework. The interface features multiple pages, including a home page, registration, login, chat creation, chat list, and chat window. By leveraging the `gloo` and `gloo-net` crates, the application efficiently handles API requests to integrate the frontend with the backend and facilitates seamless navigation between pages. This integration ensures a smooth and responsive user experience. The design and functionality of the user interface can be viewed in our demo video or explored directly through the application.
 
+<!-- Reproducibility Guide: What are the commands needed to set up the runtime environment, if any, and to build the project, so that its features can be used by a user or a developer? Note: The instructor will follow the steps you have included in this section, step-by-step, with no deviation. The instructor has access to a Ubuntu Linux server and a macOS Sonoma laptop computer. -->
 ## Reproducibility Guide
 Please follow these steps to set up and run the project:
 
 1. Install [Rust](https://www.rust-lang.org/) and `wasm-pack`:
-   ```bash
-   cargo install wasm-pack
-   ```
+     ```bash
+     cargo install wasm-pack
+     ```
 2. Clone the project and navigate into it:
      ```bash
      git clone <repository-url>
@@ -83,40 +82,26 @@ Please follow these steps to set up and run the project:
 ### Notes
 - The first time building the project may take longer as Rust downloads and compiles all dependencies.
 
-<!-- User’s (or Developer’s) Guide: How does a user — or developer, if the project is a crate — use each of the main features in the project deliverable? -->
 ## User’s Guide
+Our real-time chat application allows users to communicate with each other in chat rooms similar to other online chat platforms. Follow the instructions below to start chatting:
 
-Since it is a real-time chat application, a user is able to talk to other users by joining a chat room just like every other normal online chat application following the instructions below:
+### 1. Home Page
+Upon launching the application, you will be directed to the home page. Here, you will see options to either log in or register. Simply click the corresponding button to proceed.
 
-1. Log in or register:
+### 2. Log in or Register
+Users must log in or register to use the application. Registration requires you to create a username and password. There are no specific restrictions on the format or length of these credentials, as the primary focus of the application is on the chat functionality. After registering, you can use these credentials to log in and access the chat features.
 
-   > Users need to either log in or register using their self-created credentials (username and password). We don't have any limitations on the format or length of them since our main goal is on the chatting portion.
+### 3. Create or Enter a Channel
+In the application, a "channel" represents a chat room where users can communicate with each other. To create a new channel, click the "create a channel" button and provide a unique name for your channel. The application ensures that channel names are unique, and you can consult the "available channel list" to avoid duplication. Once created, the channel becomes accessible, and you will automatically be designated as the owner. If you want to join an existing channel, you can select it from the channel list and click "enter channel" to join the conversation.
 
-2. Create or enter a channel:
+### 4. Chat with Other Users
+After entering a chat room, you will be able to view all previous messages sent in the channel, along with the sender’s username and the time each message was sent. When you join, a broadcast message such as "*<Username>: <Username> joined the chat*" will appear in the chat for all users to see. To send a message, simply type it into the input field and press "send." Your message, along with your username and the time, will immediately be added to the chat history and displayed for all users in the channel.
 
-   > The "channel" here represents a chat room where you can see other users' status and chat with them. 
-   >
-   > Clicking on the "create a channel" button and inputting a unique "channel name" helps you successfully create a channel owned by yourself. You can also check the "available channel list" to avoid duplicate channel names.
-   >
-   > After successfully creating a channel, you will be navigated back to the channel list page where you can simply choose a channel and click the "enter channel" button to enter the room.
+### 5. User Status Indicators
+The chat interface includes a user status panel on the right-hand side, which provides real-time information about user activity. Users marked in green are currently online, while those marked in red are offline but have been in the channel before. If a user’s name is not listed in the status panel, it means they have never joined the channel.
 
-3.  Chat with other users:
-
-   > After entering the chat room, you can see all the history messages sent in the channel before, along with the sent user and time. 
-   >
-   > A broadcast message like "*Username: Username joined the chat*" along with the time will be shown in the middle of the screen so everyone in the channel will find you joining.
-   >
-   > Every time you input some message and press "send", a new message along with your username and current time will be added to the chat history and every other users in this channel will be able to see it.
-
-4. User status (green: online, red: offline):
-
-   > On the right hand side you can see a user status panel where green means the user is currently online and red means the user has entered this channel before but left the channel right now.
-
-5. Multiple users chat:
-
-   > Multiple users can join the same channel and chat with each other if you open the same server twice. Simply logging in using two different credentials and joining the same channel, you can enjoy our real-time chat service.
-
-<!-- Reproducibility Guide: What are the commands needed to set up the runtime environment, if any, and to build the project, so that its features can be used by a user or a developer? Note: The instructor will follow the steps you have included in this section, step-by-step, with no deviation. The instructor has access to a Ubuntu Linux server and a macOS Sonoma laptop computer. -->
+### 6. Multiple Users Chat
+The application supports simultaneous communication between multiple users in the same channel. If you are running the application locally, you can simulate multiple users by using different browsers or browser sessions. Log in with separate credentials and join the same channel to enjoy our real-time chat service.
 
 <!-- Contributions by each team member: What were the individual contributions by each member in the team? -->
 ## Contributions
@@ -141,8 +126,16 @@ Since it is a real-time chat application, a user is able to talk to other users 
 <!-- Lessons learned and concluding remarks: Write about any lessons the team has learned throughout the project and concluding remarks, if any. -->
 
 ## Learnings
+While building our real-time chat app, we gained valuable insights and practical experience in using modern technologies and frameworks to address complex challenges. This project provided a comprehensive understanding of managing high workloads, such as handling API requests, database operations, and real-time communication with the server, while maintaining high performance and reliability. By combining SQL and NoSQL databases, we learned to balance fast data processing with consistent and reliable data management.
+
+A significant learning experience came from working with the `actix-web` framework, particularly its integration with WebSocket functionality using `actix-web-actors`. Implementing WebSocket for real-time messaging helped us understand the fundamentals of full-duplex communication and how to handle persistent connections efficiently. We learned to manage client-server interactions, handle concurrent connections, and broadcast messages to specific channels in real-time. This process deepened our knowledge of how WebSocket works and how frameworks like `actix-web-actors` can simplify implementing such functionality in scalable systems.
+
+On the frontend, we explored the `yew` framework, which introduced us to building dynamic web applications using Rust. A key takeaway was using the `spawn_local` function in WebAssembly for managing asynchronous tasks, ensuring real-time updates and responsive user interactions in the browser. This experience helped us connect frontend functionality with backend WebSocket communication, enabling a real-time chat system.
+
+Data exchange consistency was another point where we gained valuable experience. Using `serde` for serializing and deserializing data helped us maintain a unified data structure between the frontend and backend. Rust’s strong static typing system further reinforced this consistency, allowing us to catch errors during compilation rather than at runtime. This approach reduced bugs and ensured a more reliable application.
+
+Overall, this project was a rich learning journey that enhanced our expertise in Rust’s ecosystem. It provided practical knowledge in using tools like `actix-web`, `yew`, and `serde` while demonstrating the importance of concurrency, and efficiency in building real-time systems. This experience has significantly improved our ability to design and implement high-performance, reliable applications.
 
 ## Video Demo Link
 
-https://drive.google.com/file/d/1O2DTfHcJG1Ab5gcfKqahxTjq4EYNJ0G4/view?usp=sharing
-
+https://drive.google.com/file/d/1m55bdhmLTH2tggw6_VFt8Xu-da5pDqUR/view?usp=sharing
