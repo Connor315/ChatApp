@@ -144,4 +144,5 @@ Since it is a real-time chat application, a user is able to talk to other users 
 
 ## Video Demo Link
 
-https://drive.google.com/file/d/1m55bdhmLTH2tggw6_VFt8Xu-da5pDqUR/view?usp=sharing
+https://drive.google.com/file/d/1O2DTfHcJG1Ab5gcfKqahxTjq4EYNJ0G4/view?usp=sharing
+
