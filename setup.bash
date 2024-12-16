@@ -2,8 +2,8 @@
 cargo install wasm-pack
 
 # Step 2: Clone the project and navigate into it
-git clone <repository-url>
-cd chat
+git clone https://github.com/Connor315/ChatApp.git
+cd ChatApp
 
 # Step 3: Navigate to the frontend folder, compile it, and output to the static directory
 cd frontend

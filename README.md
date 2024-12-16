@@ -60,8 +60,8 @@ Please follow these steps to set up and run the project:
      ```
 2. Clone the project and navigate into it:
      ```bash
-     git clone <repository-url>
-     cd chat
+     git clone https://github.com/Connor315/ChatApp.git
+     cd ChatApp
      ```
 3. Navigate to the `frontend` folder and compile it, outputting to the `../static` directory:
      ```bash
