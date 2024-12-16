@@ -124,6 +124,7 @@ The application supports simultaneous communication between multiple users in th
 - Implemented user logout.
 
 <!-- Lessons learned and concluding remarks: Write about any lessons the team has learned throughout the project and concluding remarks, if any. -->
+
 ## Learnings
 While building our real-time chat app, we gained valuable insights and practical experience in using modern technologies and frameworks to address complex challenges. This project provided a comprehensive understanding of managing high workloads, such as handling API requests, database operations, and real-time communication with the server, while maintaining high performance and reliability. By combining SQL and NoSQL databases, we learned to balance fast data processing with consistent and reliable data management.
 
@@ -134,3 +135,7 @@ On the frontend, we explored the `yew` framework, which introduced us to buildin
 Data exchange consistency was another point where we gained valuable experience. Using `serde` for serializing and deserializing data helped us maintain a unified data structure between the frontend and backend. Rust’s strong static typing system further reinforced this consistency, allowing us to catch errors during compilation rather than at runtime. This approach reduced bugs and ensured a more reliable application.
 
 Overall, this project was a rich learning journey that enhanced our expertise in Rust’s ecosystem. It provided practical knowledge in using tools like `actix-web`, `yew`, and `serde` while demonstrating the importance of concurrency, and efficiency in building real-time systems. This experience has significantly improved our ability to design and implement high-performance, reliable applications.
+
+## Video Demo Link
+
+https://drive.google.com/file/d/1m55bdhmLTH2tggw6_VFt8Xu-da5pDqUR/view?usp=sharing
