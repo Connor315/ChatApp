@@ -139,4 +139,9 @@ Since it is a real-time chat application, a user is able to talk to other users 
 - Implemented user logout.
 
 <!-- Lessons learned and concluding remarks: Write about any lessons the team has learned throughout the project and concluding remarks, if any. -->
+
 ## Learnings
+
+## Video Demo Link
+
+https://drive.google.com/file/d/1m55bdhmLTH2tggw6_VFt8Xu-da5pDqUR/view?usp=sharing
