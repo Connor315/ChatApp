@@ -133,4 +133,5 @@ Data exchange consistency was another point where we gained valuable experience.
 Overall, this project was a rich learning journey that enhanced our expertise in Rust’s ecosystem. It provided practical knowledge in using tools like `actix-web`, `yew`, and `serde` while demonstrating the importance of concurrency, and efficiency in building real-time systems. This experience has significantly improved our ability to design and implement high-performance, reliable applications.
 
 ## Video Demo Link
-https://drive.google.com/file/d/1m55bdhmLTH2tggw6_VFt8Xu-da5pDqUR/view?usp=sharing
+
+https://drive.google.com/file/d/1O2DTfHcJG1Ab5gcfKqahxTjq4EYNJ0G4/view?usp=sharing
