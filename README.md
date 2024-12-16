@@ -1,13 +1,13 @@
-## Real-Time Chat Application Final Report
+# Real-Time Chat Application
 
-#### Team Members
+## Team Members
 - Chen Wang (wangc425 | 1006058926 | chennn.wang@mail.utoronto.ca)
 - Kangzhi Gao (gaokangz | 1006307827 | kangzhi.gao@mail.utoronto.ca)
 - Yalin Tuo (tuoyalin | 1006033196 | yalin.tuo@mail.utoronto.ca)
 
 <!-- Motivation: What motivated your team to spend time on this project? An excellent project idea is satisfying and fun to work on, and fills a gap that may not be easily found in the Rust ecosystem. -->
 
-### Motivation
+## Motivation
 
 Our team wanted to build this real-time chat application because we found severe problems with many existing chat platforms. These platforms offer a lot of functionality, but they tend to suffer from performance degradation when the number of users is high, resulting in slower messaging and impacting the user experience. In addition, the interface design of these platforms, while fully functional, is overly complex, making it potentially confusing and costly for new users to learn when using them for the first time. In contrast, our application is designed to be lightweight and easy to use, focusing on core features such as real-time messaging, easy-to-manage chat rooms, and clear online status displays. By keeping the interface simple and straightforward, we wanted to improve the user experience, reduce unnecessary complexity, and make the application easier to use and more efficient.
 
@@ -15,7 +15,7 @@ Our goal was to create an application that would run quickly in highly simultane
 
 <!-- Objectives: What are the objectives of this project? -->
 
-### Objective
+## Objective
 The main goals of our live chat app are to make it better and solve common problems with online communication tools. We want to work hard on research and development. This will help the app meet modern user needs. The project also aims to create special features and strong performance. Our goal is for the app to stand out in the market.
 
 First of all, a key aim of this project is to offer users quick and smooth communication that feels instantaneous. To achieve this, server load is managed efficiently, and network protocols are optimized. Real-time applications like ours depend on WebSockets for quick communication and asynchronous operations for handling tasks without waiting. The Yew framework helps maintain the app's state effectively, ensuring smooth functionality. By using WebAssembly for rendering on the client side, server pressure is lowered, and response time is faster. Stability is improved through reliable error handling and automatic reconnections, so users stay connected even during temporary issues. These features combine to provide a responsive and reliable chatting experience online.
@@ -26,17 +26,65 @@ Besides, it boost much users like using our product by making the interface simp
 
 Use Rust’s speed and memory safety to build a strong and fast chat app. This real-time chat app uses Rust’s best features to make a stable and responsive platform. By following Rust’s ownership and borrowing rules, the app avoids memory problems during concurrent tasks, stopping issues like data races. Async programming in Rust makes it faster, letting the app handle network requests and I/O tasks without slowing down the interface. Serde helps by quickly and safely converting chat messages for network use, which improves communication efficiency. Compiling Rust into WebAssembly allows fast client-side processing, cutting server work and making the app more responsive. On the backend, Rust manages WebSocket connections, keeping chats smooth and fast for frequent message exchanges. Rust’s strong type system and memory control ensure the app stays stable and reliable.
 
+Our Real-Time Chat Application fills a gap in the Rust ecosystem by providing a complete real-time chat solution that’s built entirely with Rust. Currently, there aren’t many complete options in Rust for building chat apps that include secure user authentication, quick messaging, and a user-friendly interface. By using several Rust frameworks and libraries like Rocket for secure backend functions, WebSocket for quick, real-time messaging, and Yew for the user interface, we’re showing that Rust can be used to make responsive and interactive applications.
 
+By emphasizing these key features, we aim to highlight the potential for Rust in developing modern web applications that are not only scalable and performant but also maintain a high standard of security and simplicity.
 
 <!-- Features: What are the main features offered by the final project deliverable? -->
-### Features
-For easy-to-use and user-friendly, we choose to use Sqlite by using sqlx and one nosql database using sled crate rather than using Postgresql which requires external dependencies, as you will see in the user's guide and Reproducibility guide, our setup procedures is super simple and easy to use and understand.
-User authentications such as ... is considered lower volumn compared to storing chat messages persistently in real life and existing productions, since ...so that we can use sqlite database with relational sql for data integrity and minimize errors, and use nosql database for chat messages to optimize read and write performance since messaging is priorities in our application with high volumn requests where we want to store the chat messages persistently as well.
+## Features
+Our real-time chat application offers a variety of features to enhance user experience, including persistent storage with databases, user authentication, the ability to create and join chat rooms, real-time messaging, presence detection, and a user-friendly interface. Below is a detailed description of these features:
 
-Our real-time communication part implemented using websocket which supports  full-duplex communication, meaning the server and client can send and receive messages simultaneously over a single but persistent connection. Since the WebSocket connection remains open for as long as needed, there's no need to repeatedly establish connections like in HTTP. This reduces latency significantly, making it ideal for real-time applications. Also, webSockets allow servers to push data updates to users, reducing the need for users to poll the database frequently. This reduces the number of redundant database queries and lightens the load on the database.
+### Persistent Storage
+Our application utilizes two lightweight databases for local persistent storage: a relational database (SQLite) using the `sqlx` library and a NoSQL database powered by the `sled` crate. SQLite is used to store sensitive data such as usernames, passwords, chat room names, and owners, as these are accessed less frequently, resulting in lower workload and enhanced data security through the `sqlx` library’s built-in features. In contrast, the sled NoSQL database handles less sensitive but frequently accessed data, such as channel messages and user statuses, providing high-performance read and write operations. These databases were chosen for their lightweight nature and lack of external dependencies, initializing automatically when the application is first run. This combination ensures a balance of performance, scalability, and security for an optimal user experience.
+
+### User Authentication
+Our application implements user authentication using password hashing provided by the `pwhash` crate. User credentials, including usernames and hashed passwords, are securely stored in the database to protect sensitive information. The `username` field in the `Users` table is designed to be unique, ensuring no duplicate accounts can exist with the same username. The authentication process supports user registration and login by handling API `POST` requests. During registration, the application hashes the user's password before storing it in the database. For login, the provided credentials are validated by matching the username and verifying the hashed password against the stored data. This approach ensures a secure and straightforward implementation of user authentication while safeguarding user data. Once a user successfully logs in, the application stores the user ID and username in the session. This allows for convenient access to user information for authorization-required operations within the application, eliminating the need to repeatedly send API requests to verify the user for each action.
+
+### Channel Creation and Joining
+Our application allows users to create new channels or join existing ones created by others. In the database design, the `channel` table includes a unique `name` field to ensure consistency and enhance user experience, as well as a foreign key linking the channel to the username of its creator. Each channel is designed for private conversations, ensuring that only users who join a specific channel can participate and view its messages. When a user creates a channel, they automatically become the owner of that channel. Users joining an existing channel connect to its corresponding WebSocket channel, enabling real-time communication. Messages sent by users in a channel are broadcast to all participants in the same channel through the server, enabling real-time group chatting within the private conversation.
+
+### Real-Time Messaging
+Our application uses WebSocket, powered by `actix-web-actors`, to enable full-duplex communication for real-time messaging functionality. This allows the server and client to send and receive messages simultaneously over a single persistent connection, ensuring low-latency communication. Unlike HTTP, where connections must be re-established for each request, WebSocket connections remain open as long as needed, significantly reducing latency and making it ideal for real-time applications. We use the `chrono` crate to record the timestamp for each message sent, ensuring accurate tracking and ordering of messages. Additionally, all message data is stored in the NoSQL database for later retrieval, allowing users to access chat history as needed. WebSocket also allows servers to push data updates directly to users, eliminating the need for frequent database polling, reducing redundant queries, and optimizing database performance while providing a smooth messaging experience.
+
+### View Channel History
+When users join an existing channel, our application automatically fetches the complete channel history from the database, including messages from all users, and displays them in a user-friendly format on the interface to enhance the user experience. The history fetch operation occurs only once upon entering the channel to minimize backend workload. Subsequent chat messages are temporarily stored in memory for real-time display and persistently stored in the database for long-term access. This approach ensures a smooth user experience while reducing the frequency of heavy read operations on the database, optimizing application performance.
+
+### Presence Detection
+Our application includes a presence detection feature to track user statuses in real time. Alongside the chat component, each channel has its own user status list that displays active and inactive users specific to that channel. Color indicators are used to represent user statuses: green signifies users currently in the channel, red indicates users who have joined the channel before but are not present at the moment, and users not listed have never joined the channel. This functionality is implemented within WebSocket, with user statuses stored in the NoSQL database. When a user joins a channel, their status is updated to "online," and when they exit, it changes to "offline." To ensure real-time updates, user statuses are refreshed every 5 seconds. The performance impact remains minimal since the number of status entries for a channel is limited to the total number of application users, maintaining efficient resource utilization.
+
+### User Interface
+Our application includes a lightweight Rust-based project folder dedicated to a user-friendly interface, developed using the Yew framework. The interface features multiple pages, including a home page, registration, login, chat creation, chat list, and chat window. By leveraging the `gloo` and `gloo-net` crates, the application efficiently handles API requests to integrate the frontend with the backend and facilitates seamless navigation between pages. This integration ensures a smooth and responsive user experience. The design and functionality of the user interface can be viewed in our demo video or explored directly through the application.
+
+## Reproducibility Guide
+Please follow these steps to set up and run the project:
+
+1. Install [Rust](https://www.rust-lang.org/) and `wasm-pack`:
+   ```bash
+   cargo install wasm-pack
+   ```
+2. Clone the project and navigate into it:
+     ```bash
+     git clone <repository-url>
+     cd chat
+     ```
+3. Navigate to the `frontend` folder and compile it, outputting to the `../static` directory:
+     ```bash
+     cd frontend
+     wasm-pack build --target web --out-dir ../static --release
+     ```
+4. From the project root directory, build and run the backend:
+     ```bash
+     cd ..
+     cargo build --release
+     ./target/release/chat
+     ```
+5. After seeing successful printouts in the terminal, access the app via browser at [http://localhost:8080/](http://localhost:8080/).
+
+### Notes
+- The first time building the project may take longer as Rust downloads and compiles all dependencies.
 
 <!-- User’s (or Developer’s) Guide: How does a user — or developer, if the project is a crate — use each of the main features in the project deliverable? -->
-### User’s Guide
+## User’s Guide
 
 Since it is a real-time chat application, a user is able to talk to other users by joining a chat room just like every other normal online chat application following the instructions below:
 
@@ -70,56 +118,25 @@ Since it is a real-time chat application, a user is able to talk to other users 
 
 <!-- Reproducibility Guide: What are the commands needed to set up the runtime environment, if any, and to build the project, so that its features can be used by a user or a developer? Note: The instructor will follow the steps you have included in this section, step-by-step, with no deviation. The instructor has access to a Ubuntu Linux server and a macOS Sonoma laptop computer. -->
 
-### Reproducibility Guide
-Please follow these steps to set up and run the project:
-
-1. Install [Rust](https://www.rust-lang.org/) and `wasm-pack`:
-   ```bash
-   cargo install wasm-pack
-   ```
-2. Clone the project and navigate into it:
-     ```bash
-     git clone <repository-url>
-     cd chat
-     ```
-3. Navigate to the `frontend` folder and compile it, outputting to the `../static` directory:
-     ```bash
-     cd frontend
-     wasm-pack build --target web --out-dir ../static --release
-     ```
-4. From the project root directory, build and run the backend:
-     ```bash
-     cd ..
-     cargo build --release
-     ./target/release/chat
-     ```
-5. After seeing successful printouts in the terminal, access the app via browser at [http://localhost:8080/](http://localhost:8080/).
-
-#### Notes
-- The first time building the project may take longer as Rust downloads and compiles all dependencies.
-
 <!-- Contributions by each team member: What were the individual contributions by each member in the team? -->
-### Contributions
-
+## Contributions
 **Chen Wang:**
-- Implemented real-time communication using websocket
-- Implemented frontend-backend integration of real-time communication
-- Implemented channel enter
-- Implemented channel history
+- Implemented real-time communication using websocket.
+- Implemented frontend-backend integration of real-time communication.
+- Implemented channel enter.
+- Implemented channel history.
 
 **Kangzhi Gao:**
-- Implemented database and user authentication
-- Implemented integration 
-- Implemented channel creation
-- Implemented frontend-backend integration
+- Implemented database and user authentication.
+- Implemented frontend-backend integration 
+- Implemented channel creation.
+- Implemented frontend-backend integration.
 
 **Yalin Tuo:**
-
-- Implemented frontend login and registration
-- Implemented channel list and chat room page design
-- Implemented channel selection
-- Implemented user logout
+- Implemented frontend login and registration.
+- Implemented channel list and chat room page design.
+- Implemented channel selection.
+- Implemented user logout.
 
 <!-- Lessons learned and concluding remarks: Write about any lessons the team has learned throughout the project and concluding remarks, if any. -->
-
-### Learnings
+## Learnings
