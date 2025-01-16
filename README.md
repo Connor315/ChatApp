@@ -1,30 +1,30 @@
 # Real-Time Chat Application
 
 ## Team Members
-- Chen Wang (wangc425 | 1006058926 | chennn.wang@mail.utoronto.ca)
-- Kangzhi Gao (gaokangz | 1006307827 | kangzhi.gao@mail.utoronto.ca)
-- Yalin Tuo (tuoyalin | 1006033196 | yalin.tuo@mail.utoronto.ca)
+- Chen Wang (chennn.wang@mail.utoronto.ca)
+- Kangzhi Gao (kangzhi.gao@mail.utoronto.ca)
+- Yalin Tuo (yalin.tuo@mail.utoronto.ca)
 
 <!-- Motivation: What motivated your team to spend time on this project? An excellent project idea is satisfying and fun to work on, and fills a gap that may not be easily found in the Rust ecosystem. -->
-## Motivation
+<!-- ## Motivation
 Our team was motivated to build this real-time chat application to create a high-performance, lightweight messaging platform using Rust. While existing chat applications are functional, many of them are overly complex, with bloated features that can be confusing for new users and consume excessive system resources. In contrast, our application aims to simplify the user experience by focusing on core features such as real-time messaging, easy-to-manage chat rooms, and intuitive online status displays. By keeping the interface straightforward and reducing unnecessary complexity, we sought to make the application more user-friendly and efficient.
 
 We chose Rust as our development language due to its high performance, memory safety, and efficient resource management. While Rust is not commonly used for real-time chat applications, we believed its unique advantages could help us deliver a clean, robust, and innovative alternative to existing platforms. By using Rust, we could develop a simple yet powerful application. This project allowed us to address performance challenges while providing a robust solution for real-time communication. Ultimately, our aim was to deliver a lightweight, high-performance chat application.
 
-Our Real-Time Chat Application fills a gap in the Rust ecosystem by providing a complete real-time chat solution that’s built entirely with Rust. Currently, there aren’t many complete options in Rust for building chat apps that include secure user authentication, quick messaging, and a user-friendly interface. By using several Rust frameworks and libraries like Actix Web for secure backend functions, WebSocket for quick, real-time messaging, and Yew for the user interface, we’re showing that Rust can be used to make responsive and interactive applications.
+Our Real-Time Chat Application fills a gap in the Rust ecosystem by providing a complete real-time chat solution that’s built entirely with Rust. Currently, there aren’t many complete options in Rust for building chat apps that include secure user authentication, quick messaging, and a user-friendly interface. By using several Rust frameworks and libraries like Actix Web for secure backend functions, WebSocket for quick, real-time messaging, and Yew for the user interface, we’re showing that Rust can be used to make responsive and interactive applications. -->
 
 <!-- Objectives: What are the objectives of this project? -->
-## Objective
+<!-- ## Objective
 The primary objective is to deliver a robust, high-performance, and user-friendly chat application that enables low-latency real-time communication.
 
 A key aspect of this project is providing users with instant and reliable communication. By utilizing WebSockets for persistent, low-latency connections and Rust’s asynchronous programming, the application handles tasks efficiently without blocking operations. The Yew framework ensures effective state management on the client side, while WebAssembly enhances client-side rendering, reducing the server's workload and improving response times. Features such as automatic reconnections and error handling are designed to minimize disruptions during temporary connectivity issues, resulting in a stable and responsive user experience.
 
 Another important objective is building a backend capable of maintaining high performance as the number of users grows. The application uses SQLite for storing user and channel data and sled for chat messages, providing reliable storage with the flexibility to scale to cloud-based databases when necessary. WebSockets facilitate real-time communication with minimal delay ensures the efficient handling of concurrent requests. The backend is designed with scalability in mind, allowing the application to support multiple users simultaneously without sacrificing speed or reliability.
 
-Creating a simple and intuitive user interface is also central to the project. The interface is designed to be accessible and easy to navigate, ensuring that users can interact with the platform effortlessly, regardless of their technical expertise. Built with the Yew framework, the interface maintains consistency and clarity, with well-labeled buttons, helpful error messages, and smooth transitions between screens. The uniform design of interactive elements, such as buttons and input fields, ensures users feel comfortable and familiar with the application, making it easier to adopt and use.
+Creating a simple and intuitive user interface is also central to the project. The interface is designed to be accessible and easy to navigate, ensuring that users can interact with the platform effortlessly, regardless of their technical expertise. Built with the Yew framework, the interface maintains consistency and clarity, with well-labeled buttons, helpful error messages, and smooth transitions between screens. The uniform design of interactive elements, such as buttons and input fields, ensures users feel comfortable and familiar with the application, making it easier to adopt and use. -->
 
 <!-- Features: What are the main features offered by the final project deliverable? -->
-## Features
+<!-- ## Features
 Our real-time chat application offers a variety of features to enhance user experience, including persistent storage with databases, user authentication, the ability to create and join chat rooms, real-time messaging, presence detection, and a user-friendly interface. Below is a detailed description of these features:
 
 ### Persistent Storage
@@ -46,7 +46,7 @@ When users join an existing channel, our application automatically fetches the c
 Our application includes a presence detection feature to track user statuses in real time. Alongside the chat component, each channel has its own user status list that displays active and inactive users specific to that channel. Color indicators are used to represent user statuses: green signifies users currently in the channel, red indicates users who have joined the channel before but are not present at the moment, and users not listed have never joined the channel. This functionality is implemented within WebSocket, with user statuses stored in the NoSQL database. When a user joins a channel, their status is updated to "online," and when they exit, it changes to "offline." To ensure real-time updates, user statuses are refreshed every 5 seconds. The performance impact remains minimal since the number of status entries for a channel is limited to the total number of application users, maintaining efficient resource utilization.
 
 ### User Interface
-Our application includes a lightweight Rust-based project folder dedicated to a user-friendly interface, developed using the Yew framework. The interface features multiple pages, including a home page, registration, login, chat creation, chat list, and chat window. By leveraging the `gloo` and `gloo-net` crates, the application efficiently handles API requests to integrate the frontend with the backend and facilitates seamless navigation between pages. This integration ensures a smooth and responsive user experience. The design and functionality of the user interface can be viewed in our demo video or explored directly through the application.
+Our application includes a lightweight Rust-based project folder dedicated to a user-friendly interface, developed using the Yew framework. The interface features multiple pages, including a home page, registration, login, chat creation, chat list, and chat window. By leveraging the `gloo` and `gloo-net` crates, the application efficiently handles API requests to integrate the frontend with the backend and facilitates seamless navigation between pages. This integration ensures a smooth and responsive user experience. The design and functionality of the user interface can be viewed in our demo video or explored directly through the application. -->
 
 <!-- Reproducibility Guide: What are the commands needed to set up the runtime environment, if any, and to build the project, so that its features can be used by a user or a developer? Note: The instructor will follow the steps you have included in this section, step-by-step, with no deviation. The instructor has access to a Ubuntu Linux server and a macOS Sonoma laptop computer. -->
 ## Reproducibility Guide
@@ -99,7 +99,7 @@ The chat interface includes a user status panel on the right-hand side, which pr
 The application supports simultaneous communication between multiple users in the same channel. If you are running the application locally, you can simulate multiple users by using different browsers or browser sessions. Log in with separate credentials and join the same channel to enjoy our real-time chat service.
 
 <!-- Contributions by each team member: What were the individual contributions by each member in the team? -->
-## Contributions
+<!-- ## Contributions
 **Chen Wang:**
 - Implemented real-time communication using websocket.
 - Implemented frontend-backend integration of real-time communication.
@@ -116,10 +116,10 @@ The application supports simultaneous communication between multiple users in th
 - Implemented frontend login and registration.
 - Implemented channel list and chat room page design.
 - Implemented channel selection.
-- Implemented user logout.
+- Implemented user logout. -->
 
 <!-- Lessons learned and concluding remarks: Write about any lessons the team has learned throughout the project and concluding remarks, if any. -->
-## Learnings
+<!-- ## Learnings
 While building our real-time chat app, we gained valuable insights and practical experience in using modern technologies and frameworks to address complex challenges. This project provided a comprehensive understanding of managing high workloads, such as handling API requests, database operations, and real-time communication with the server, while maintaining high performance and reliability. By combining SQL and NoSQL databases, we learned to balance fast data processing with consistent and reliable data management.
 
 A significant learning experience came from working with the `actix-web` framework, particularly its integration with WebSocket functionality using `actix-web-actors`. Implementing WebSocket for real-time messaging helped us understand the fundamentals of full-duplex communication and how to handle persistent connections efficiently. We learned to manage client-server interactions, handle concurrent connections, and broadcast messages to specific channels in real-time. This process deepened our knowledge of how WebSocket works and how frameworks like `actix-web-actors` can simplify implementing such functionality in scalable systems.
@@ -128,7 +128,7 @@ On the frontend, we explored the `yew` framework, which introduced us to buildin
 
 Data exchange consistency was another point where we gained valuable experience. Using `serde` for serializing and deserializing data helped us maintain a unified data structure between the frontend and backend. Rust’s strong static typing system further reinforced this consistency, allowing us to catch errors during compilation rather than at runtime. This approach reduced bugs and ensured a more reliable application.
 
-Overall, this project was a rich learning journey that enhanced our expertise in Rust’s ecosystem. It provided practical knowledge in using tools like `actix-web`, `yew`, and `serde` while demonstrating the importance of concurrency, and efficiency in building real-time systems. This experience has significantly improved our ability to design and implement high-performance, reliable applications.
+Overall, this project was a rich learning journey that enhanced our expertise in Rust’s ecosystem. It provided practical knowledge in using tools like `actix-web`, `yew`, and `serde` while demonstrating the importance of concurrency, and efficiency in building real-time systems. This experience has significantly improved our ability to design and implement high-performance, reliable applications. -->
 
 ## Video Demo Link
 
